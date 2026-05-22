@@ -18,7 +18,6 @@ Required acknowledgement fields:
 The acknowledgement is sought from:
   1. EVIDENCE_PATH env var — explicit evidence file
   2. .elis/pe/<PE_ID>/evidence/ directory for reset_ack marks
-  3. HANDOFF.md — "Reset Acknowledgement" section
 
 Usage:
   python scripts/check_reset_ack.py --pe-id PE-OPS-WORKTREE-BINDING-02 --agent infra-impl-b
@@ -172,7 +171,7 @@ def main() -> int:
     print(f"Checking reset acknowledgement for {agent_id} / {pe_id}...")
     print()
 
-    # Resolution order: explicit path → evidence dir → HANDOFF.md
+    # Resolution order: explicit path → evidence dir
     ack_data: dict | None = None
     source: str = ""
 
@@ -190,6 +189,9 @@ def main() -> int:
                         print(f"  FAIL: {i}")
                     return 1
             else:
+                if ep.name == "HANDOFF.md":
+                    print("FAIL: HANDOFF.md is not accepted as reset acknowledgement evidence.")
+                    return 1
                 # Non-JSON file: try as markdown
                 content = ep.read_text(encoding="utf-8")
                 ack_data = _parse_ack_section(content, agent_id)
@@ -217,9 +219,10 @@ def main() -> int:
                 source = str(evidence_file)
 
     if ack_data is None:
-        ack_data = _check_handoff_for_ack(pe_id, agent_id)
-        if ack_data:
-            source = "HANDOFF.md"
+        handoff_path = Path("HANDOFF.md")
+        if handoff_path.exists():
+            print("FAIL: HANDOFF.md is not accepted as reset acknowledgement evidence.")
+            return 1
 
     if ack_data is None:
         print("FAIL: No reset acknowledgement found.")
@@ -228,7 +231,7 @@ def main() -> int:
         if args.evidence_path:
             print(f"  - explicit path: {args.evidence_path}")
         print(f"  - .elis/pe/{pe_id}/evidence/reset_ack_*")
-        print("  - HANDOFF.md")
+        print("  - runtime evidence exported via EVIDENCE_PATH")
         print()
         print("NO_RESET_ACK_NO_DISPATCH gate: DISPATCH PROHIBITED.")
         return 1

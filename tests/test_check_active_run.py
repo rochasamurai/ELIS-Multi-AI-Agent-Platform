@@ -147,7 +147,7 @@ def test_script_with_wrong_pe(tmp_path):
 
 
 def test_handoff_evidence_detection(tmp_path):
-    """Active run evidence in HANDOFF.md should be detected."""
+    """Active run evidence in HANDOFF.md should be rejected."""
     cwd = Path(tmp_path)
     handoff = cwd / "HANDOFF.md"
     handoff.write_text(
@@ -168,11 +168,10 @@ def test_handoff_evidence_detection(tmp_path):
         cwd=str(cwd),
         timeout=30,
     )
-    assert (
-        result.returncode == 0
-    ), f"Expected 0, got {result.returncode}\n{result.stdout}"
-    assert "Active run evidence VALID" in result.stdout
-    assert "Source: HANDOFF.md" in result.stdout
+    assert result.returncode != 0, (
+        f"Expected failure, got {result.returncode}\n{result.stdout}\n{result.stderr}"
+    )
+    assert "HANDOFF.md" in result.stdout or "HANDOFF.md" in result.stderr
 
 
 def test_missing_session_id():

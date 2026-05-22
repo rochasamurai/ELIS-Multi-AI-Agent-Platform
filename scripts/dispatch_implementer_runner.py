@@ -1,4 +1,7 @@
-"""Resolve CURRENT_PE.md into workflow_dispatch inputs for PE-AUTO-04."""
+"""Resolve CURRENT_PE.md into workflow_dispatch inputs for PE-AUTO-04.
+
+The current PE must already be rooted in the trusted canonical baseline.
+"""
 
 from __future__ import annotations
 

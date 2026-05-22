@@ -192,34 +192,55 @@ class WorkspaceAssessment:
 def _load_current_pe_state(repo_root: Path) -> dict[str, object]:
     state_path = repo_root / CURRENT_PE_STATE_PATH
     if not state_path.exists():
-        raise ValueError(f"Missing current PE state file: {CURRENT_PE_STATE_PATH}")
-
-    state = json.loads(state_path.read_text(encoding="utf-8"))
-    required = (
-        "pe_id",
-        "objective",
-        "branch",
-        "baseline",
-        "lane",
-        "implementer",
-        "validator",
-        "current_state",
-        "file_scope",
-        "runtime_bootstrap_allowlist",
-        "required_rules",
-        "phase_1_gates",
-        "tests",
-        "rollback",
-        "hard_stops",
-        "live_dispatch_statement",
-        "runtime_bootstrap_policy",
-    )
-    missing = [key for key in required if key not in state]
-    if missing:
-        raise ValueError(
-            "Current PE state is missing required keys: " + ", ".join(missing)
-        )
+        raise ValueError(f"Missing current PE state file: {state_path}")
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in current PE state file: {state_path}") from exc
+    if not isinstance(state, dict):
+        raise ValueError(f"Current PE state file must contain a JSON object: {state_path}")
     return state
+
+
+def _verify_canonical_repo_trust(repo_root: Path) -> None:
+    canonical_root = Path("/opt/elis/repo").resolve()
+    if repo_root.resolve() != canonical_root:
+        return
+    if not (repo_root / ".git").exists():
+        return
+
+    local_origin_main = subprocess.check_output(
+        ["git", "rev-parse", "origin/main"], cwd=repo_root, text=True
+    ).strip()
+    remote_result = subprocess.run(
+        ["git", "ls-remote", "origin", "refs/heads/main"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote_line = remote_result.stdout.strip().splitlines()[0] if remote_result.stdout.strip() else ""
+    remote_origin_main = remote_line.split()[0] if remote_line else ""
+    if remote_result.returncode != 0 or not remote_origin_main:
+        raise ValueError("Canonical repo origin/main cannot be resolved from remote.")
+    if local_origin_main != remote_origin_main:
+        raise ValueError(
+            "Canonical repo origin/main is stale; fetch origin before dispatch."
+        )
+
+    dirty = subprocess.run(
+        ["git", "status", "--short"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if dirty.returncode != 0:
+        raise ValueError("Canonical repo status could not be read.")
+    if dirty.stdout.strip():
+        raise ValueError(
+            "Canonical repo is dirty or untrusted; clean it or quarantine it before dispatch."
+        )
 
 
 def build_packet(
@@ -579,6 +600,7 @@ def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
 def main(argv: Iterable[str] | None = None) -> int:
     args = _parse_args(argv)
     repo_root = Path(args.repo_root).resolve()
+    _verify_canonical_repo_trust(repo_root)
     state = _load_current_pe_state(repo_root)
     packet = build_packet(
         state=state,

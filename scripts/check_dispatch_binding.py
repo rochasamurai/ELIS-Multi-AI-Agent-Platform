@@ -44,6 +44,7 @@ FAILURE_CLASSES = {
     "DIRTY_WORKTREE": "Agent worktree has tracked dirty files",
     "MISSING_ORIGIN_REMOTE": "Repo checkout has no origin remote",
     "STALE_FETCH": "origin/main is not reachable; fetch required",
+    "CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN": "Canonical repo is dirty or untrusted",
     "DETACHED_HEAD": "Agent worktree is in detached HEAD state (implementer)",
     "EXPECTED_DETACHED_HEAD": "Validator worktree is on a branch instead of detached",
     "WORKTREE_MISSING": "Agent worktree path does not exist",
@@ -164,6 +165,39 @@ def main() -> int:
     except subprocess.CalledProcessError:
         print("WORKTREE_MISMATCH: repo is not a git repository", file=sys.stderr)
         return 2
+
+    try:
+        git(["remote", "get-url", "origin"], repo)
+    except subprocess.CalledProcessError:
+        print("MISSING_ORIGIN_REMOTE", file=sys.stderr)
+        return 8
+
+    try:
+        local_origin_main = git(["rev-parse", "origin/main"], repo)
+    except subprocess.CalledProcessError:
+        print("STALE_FETCH", file=sys.stderr)
+        return 8
+
+    remote_result = subprocess.run(
+        ["git", "ls-remote", "origin", "refs/heads/main"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote_line = remote_result.stdout.strip().splitlines()[0] if remote_result.stdout.strip() else ""
+    remote_origin_main = remote_line.split()[0] if remote_line else ""
+    if remote_result.returncode != 0 or not remote_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return 8
+    if local_origin_main != remote_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return 8
+
+    repo_dirty = git(["status", "--short"], repo)
+    if repo_dirty:
+        print("CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN", file=sys.stderr)
+        return 9
 
     try:
         current_branch = git(["branch", "--show-current"], worktree)

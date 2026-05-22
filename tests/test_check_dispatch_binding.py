@@ -54,6 +54,7 @@ def test_failure_class_taxonomy():
     assert "WRONG_HEAD" in MODULE.FAILURE_CLASSES
     assert "DIRTY_WORKTREE" in MODULE.FAILURE_CLASSES
     assert "MISSING_ORIGIN_REMOTE" in MODULE.FAILURE_CLASSES
+    assert "CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN" in MODULE.FAILURE_CLASSES
     assert "DETACHED_HEAD" in MODULE.FAILURE_CLASSES
     assert "MISSING_PE_TASK" in MODULE.FAILURE_CLASSES
     assert "DISPATCH_PATH_BLOCKED" in MODULE.FAILURE_CLASSES
@@ -72,6 +73,9 @@ def test_classify_failure():
 
     label = MODULE.classify_failure("MISSING_ORIGIN_REMOTE")
     assert "MISSING_ORIGIN_REMOTE" in label
+
+    label = MODULE.classify_failure("CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN")
+    assert "CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN" in label
 
     label = MODULE.classify_failure("UNKNOWN_CODE")
     assert "UNKNOWN_FAILURE" in label
