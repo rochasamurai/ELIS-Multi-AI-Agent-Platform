@@ -68,6 +68,10 @@ def git(cmd: list[str], cwd: Path) -> str:
     return subprocess.check_output(["git", *cmd], cwd=cwd, text=True).strip()
 
 
+def _git_run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *cmd], cwd=cwd, capture_output=True, text=True, check=False)
+
+
 def _is_pe_specific_runtime(path: str) -> bool:
     parts = Path(path).parts
     return any(part.startswith("PE-") for part in parts)
@@ -92,18 +96,37 @@ FIXED_WORKTREE_FORBIDDEN = {
 }
 
 
+def _path_blocks_forbidden_bootstrap(worktree: Path, relpath: str) -> bool:
+    candidate = worktree / relpath
+    if not candidate.exists():
+        return False
+
+    # Track/stage/commit state is always forbidden for these bootstrap files.
+    tracked = _git_run(["ls-files", "--error-unmatch", "--", relpath], worktree)
+    if tracked.returncode == 0:
+        return True
+
+    # Anything present in the current HEAD vs origin/main diff is also forbidden.
+    diffed = _git_run(["diff", "--name-only", "origin/main..HEAD", "--", relpath], worktree)
+    if diffed.stdout.strip():
+        return True
+
+    # Only ignored + untracked + unstaged bootstrap files are allowed.
+    ignored = _git_run(["check-ignore", "-q", "--", relpath], worktree)
+    return ignored.returncode != 0
+
+
 def _check_forbidden_files_in_worktree(worktree: Path) -> list[str]:
     """Check for forbidden runtime/bootstrap files inside the Git worktree.
     Returns a list of forbidden files found."""
     found: list[str] = []
     for f in FIXED_WORKTREE_FORBIDDEN:
-        candidate = worktree / f
-        if candidate.exists():
+        if _path_blocks_forbidden_bootstrap(worktree, f):
             found.append(f)
-        if (worktree / ".elis" / f).exists():
-            found.append(f".elis/{f}")
+        elis_path = f".elis/{f}"
+        if _path_blocks_forbidden_bootstrap(worktree, elis_path):
+            found.append(elis_path)
     return found
-
 
 def _legacy_agent_check(agent: str) -> int:
     print(f"Agent: {agent}")
