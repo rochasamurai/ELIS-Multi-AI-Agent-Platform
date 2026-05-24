@@ -129,6 +129,52 @@ def parse_current_pe(path: Path) -> CurrentPEContext:
     )
 
 
+def verify_canonical_repo_trust(repo_root: Path) -> None:
+    """Refuse to dispatch if the canonical repository is stale or dirty."""
+    canonical_root = Path("/opt/elis/repo").resolve()
+    if repo_root.resolve() != canonical_root:
+        return
+    if not (repo_root / ".git").exists():
+        return
+
+    local_origin_main = subprocess.check_output(
+        ["git", "rev-parse", "origin/main"], cwd=repo_root, text=True
+    ).strip()
+    remote_result = subprocess.run(
+        ["git", "ls-remote", "origin", "refs/heads/main"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote_line = (
+        remote_result.stdout.strip().splitlines()[0]
+        if remote_result.stdout.strip()
+        else ""
+    )
+    remote_origin_main = remote_line.split()[0] if remote_line else ""
+    if remote_result.returncode != 0 or not remote_origin_main:
+        raise RunnerError("Canonical repo origin/main cannot be resolved from remote.")
+    if local_origin_main != remote_origin_main:
+        raise RunnerError(
+            "Canonical repo origin/main is stale; fetch origin before dispatch."
+        )
+
+    dirty = subprocess.run(
+        ["git", "status", "--short"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if dirty.returncode != 0:
+        raise RunnerError("Canonical repo status could not be read.")
+    if dirty.stdout.strip():
+        raise RunnerError(
+            "Canonical repo is dirty or untrusted; clean it or quarantine it before dispatch."
+        )
+
+
 def acceptance_criteria_for_pe(plan_path: Path, pe_id: str) -> list[str]:
     content = plan_path.read_text(encoding="utf-8")
     section_match = re.search(
@@ -172,7 +218,8 @@ def build_prompt(
         "and commit all changes with HANDOFF.md as the last commit.\n"
         "Do not open, refresh, or ready the PR yourself. The runner opens or\n"
         "readies the PR only after it verifies a clean tree and HANDOFF.md as\n"
-        "the last commit.\n\n"
+        "the last commit. Treat origin/main as the authoritative baseline;\n"
+        "HANDOFF.md is operational context, not dispatch evidence.\n\n"
         f"Active plan: {plan_path.name}\n\n"
         "=== ACTIVE PLAN ACCEPTANCE CRITERIA ===\n"
         f"{criteria_block}\n\n"
@@ -476,6 +523,7 @@ def run_implementer(argv: list[str], *, engine: str) -> int:
     try:
         inputs = parse_runner_inputs(argv, engine)
         repo_root = Path.cwd()
+        verify_canonical_repo_trust(repo_root)
         current_pe_path = repo_root / "CURRENT_PE.md"
         context = parse_current_pe(current_pe_path)
         if context.pe_id != inputs.pe_id:

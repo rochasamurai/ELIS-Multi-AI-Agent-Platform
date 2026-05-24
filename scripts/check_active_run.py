@@ -3,7 +3,7 @@
 
 The NO_ACTIVE_RUN_EVIDENCE_NO_IN_PROGRESS_STATUS rule:
 PM must not claim an agent is working (status 'implementing' or 'validating')
-unless there is active run/session evidence.
+unless there is live active run/session evidence.
 
 Required evidence:
   - active run/session id
@@ -12,7 +12,7 @@ Required evidence:
   - correct worktree
   - correct branch
   - last activity timestamp
-  - status: running/completed/failed/stalled
+  - status: running or in_progress
 
 If no active run evidence is present, status must be one of:
   NOT_STARTED, STALLED, FAILED, INCONCLUSIVE
@@ -20,7 +20,6 @@ If no active run evidence is present, status must be one of:
 Source of truth resolution order:
   1. EVIDENCE_PATH env var — explicit evidence file
   2. .elis/pe/<PE_ID>/evidence/active_run_<agent_id>.md
-  3. HANDOFF.md — "Active Run Evidence" section
 
 Usage:
   python scripts/check_active_run.py --pe-id PE-OPS-WORKTREE-BINDING-02 --agent infra-impl-b
@@ -125,10 +124,13 @@ def main() -> int:
     evidence_data: dict | None = None
     source: str = ""
 
-    # Resolution order
+    # Resolution order: explicit evidence path → evidence directory
     if args.evidence_path:
         ep = Path(args.evidence_path)
         if ep.exists():
+            if ep.name == "HANDOFF.md":
+                print("FAIL: HANDOFF.md is not accepted as active run evidence.")
+                return 1
             evidence_data = _parse_json_or_md_file(ep)
             source = str(ep)
         else:
@@ -142,18 +144,19 @@ def main() -> int:
             source = str(evidence_file)
 
     if evidence_data is None:
-        evidence_data = _check_handoff_for_evidence(pe_id, agent_id)
-        if evidence_data:
-            source = "HANDOFF.md"
+        handoff_path = Path("HANDOFF.md")
+        if handoff_path.exists():
+            print("FAIL: HANDOFF.md is not accepted as active run evidence.")
+            return 1
 
     if evidence_data is None:
         print("FAIL: No active run evidence found.")
         print()
         print("Checked locations:")
         if args.evidence_path:
-            print(f"  - {args.evidence_path}")
+            print(f"  - explicit path: {args.evidence_path}")
         print(f"  - .elis/pe/{pe_id}/evidence/active_run_{agent_id}.*")
-        print("  - HANDOFF.md")
+        print("  - runtime evidence exported via EVIDENCE_PATH")
         print()
         print(
             "NO_ACTIVE_RUN_EVIDENCE_NO_IN_PROGRESS_STATUS gate: "
@@ -186,14 +189,10 @@ def main() -> int:
         )
 
     status = evidence_data.get("status", "")
-    valid_statuses = {"running", "completed", "in_progress"}
-    if status and str(status).strip().lower() not in valid_statuses:
-        if str(status).strip().lower() == "failed":
-            print(
-                "INFO: Last known status is FAILED — review required before re-dispatch."
-            )
-        elif str(status).strip().lower() == "stalled":
-            print("INFO: Last known status is STALLED — may need restart.")
+    valid_statuses = {"running", "in_progress"}
+    status_text = str(status).strip().lower()
+    if status_text not in valid_statuses:
+        issues.append(f"Active run status is not live: {status_text or '(missing)'}")
 
     timestamp = evidence_data.get("timestamp", evidence_data.get("last_activity", ""))
     if not timestamp or str(timestamp).strip() in ("", "null", "None"):

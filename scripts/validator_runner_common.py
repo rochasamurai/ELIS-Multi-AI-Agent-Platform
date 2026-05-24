@@ -30,6 +30,7 @@ from scripts.implementer_runner_common import (
     ensure_expected_login,
     parse_current_pe,
     run_cli,
+    verify_canonical_repo_trust,
 )
 
 _VERDICT_RE = re.compile(r"^(PASS|FAIL|IN PROGRESS)\b")
@@ -88,6 +89,8 @@ def build_validator_prompt(
         "1. Read HANDOFF.md on this branch.\n"
         "2. Run quality gates: black --check, ruff check, pytest -q.\n"
         "3. Validate each acceptance criterion below against the implementation.\n"
+        "Treat origin/main as the authoritative baseline; HANDOFF.md is\n"
+        "operational context, not dispatch evidence.\n"
         "4. Add adversarial tests for any weaknesses found.\n"
         f"5. Write '{review_fpath}' (under docs/reviews/archive/) with sections:\n"
         "   ### Verdict (first body line must be PASS or FAIL)\n"
@@ -253,6 +256,7 @@ def run_validator(argv: list[str], *, engine: str) -> int:
     try:
         inputs = parse_validator_inputs(argv, engine)
         repo_root = Path.cwd()
+        verify_canonical_repo_trust(repo_root)
         current_pe_path = repo_root / "CURRENT_PE.md"
         context = parse_current_pe(current_pe_path)
 

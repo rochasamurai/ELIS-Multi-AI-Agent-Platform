@@ -175,7 +175,7 @@ def test_script_without_evidence():
 
 
 def test_script_with_inline_handoff_ack(tmp_path):
-    """Script should detect acknowledgement in HANDOFF.md."""
+    """Script should reject acknowledgement in HANDOFF.md."""
     cwd = Path(tmp_path)
     handoff = cwd / "HANDOFF.md"
     handoff.write_text(
@@ -199,6 +199,6 @@ def test_script_with_inline_handoff_ack(tmp_path):
         timeout=30,
     )
     assert (
-        result.returncode == 0
-    ), f"Expected 0, got {result.returncode}\n{result.stdout}\n{result.stderr}"
-    assert "Reset acknowledgement VALID" in result.stdout
+        result.returncode != 0
+    ), f"Expected failure, got {result.returncode}\n{result.stdout}\n{result.stderr}"
+    assert "HANDOFF.md" in result.stdout or "HANDOFF.md" in result.stderr

@@ -1,19 +1,7 @@
 """Resolve CURRENT_PE.md into workflow_dispatch inputs for PE-AUTO-05.
 
-Called by validator-dispatch.yml when the Gate 1 assignment comment is detected.
-Reads CURRENT_PE.md from the base branch (main) and verifies that the PR's head
-branch matches the active PE branch before dispatching.
-
-Dispatch is allowed after the Implementer has finished and complete
-HANDOFF/status packet evidence is present. The control plane may observe
-``implementing -> gate-1-pending`` from that evidence before dispatching through
-``gate-1-pending -> validating``.
-
-Environment variables:
-  PR_NUMBER      — pull request number (required, from github.event.issue.number)
-  CURRENT_PE_PATH — override path to CURRENT_PE.md (default: ``CURRENT_PE.md``)
-  HANDOFF_PATH   — override path to HANDOFF.md (default: ``HANDOFF.md``)
-  GITHUB_OUTPUT  — GitHub Actions output file path (written if set)
+HANDOFF evidence is supplementary; dispatch authority comes from the current
+PE state and validated live gate outputs.
 """
 
 from __future__ import annotations

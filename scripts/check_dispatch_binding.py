@@ -44,6 +44,7 @@ FAILURE_CLASSES = {
     "DIRTY_WORKTREE": "Agent worktree has tracked dirty files",
     "MISSING_ORIGIN_REMOTE": "Repo checkout has no origin remote",
     "STALE_FETCH": "origin/main is not reachable; fetch required",
+    "CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN": "Canonical repo is dirty or untrusted",
     "DETACHED_HEAD": "Agent worktree is in detached HEAD state (implementer)",
     "EXPECTED_DETACHED_HEAD": "Validator worktree is on a branch instead of detached",
     "WORKTREE_MISSING": "Agent worktree path does not exist",
@@ -65,6 +66,12 @@ def classify_failure(code: str) -> str:
 
 def git(cmd: list[str], cwd: Path) -> str:
     return subprocess.check_output(["git", *cmd], cwd=cwd, text=True).strip()
+
+
+def _git_run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *cmd], cwd=cwd, capture_output=True, text=True, check=False
+    )
 
 
 def _is_pe_specific_runtime(path: str) -> bool:
@@ -91,17 +98,84 @@ FIXED_WORKTREE_FORBIDDEN = {
 }
 
 
+def _path_blocks_forbidden_bootstrap(worktree: Path, relpath: str) -> bool:
+    candidate = worktree / relpath
+    if not candidate.exists():
+        return False
+
+    # Track/stage/commit state is always forbidden for these bootstrap files.
+    tracked = _git_run(["ls-files", "--error-unmatch", "--", relpath], worktree)
+    if tracked.returncode == 0:
+        return True
+
+    # Anything present in the current HEAD vs origin/main diff is also forbidden.
+    diffed = _git_run(
+        ["diff", "--name-only", "origin/main..HEAD", "--", relpath], worktree
+    )
+    if diffed.stdout.strip():
+        return True
+
+    # Only ignored + untracked + unstaged bootstrap files are allowed.
+    ignored = _git_run(["check-ignore", "-q", "--", relpath], worktree)
+    return ignored.returncode != 0
+
+
 def _check_forbidden_files_in_worktree(worktree: Path) -> list[str]:
     """Check for forbidden runtime/bootstrap files inside the Git worktree.
     Returns a list of forbidden files found."""
     found: list[str] = []
     for f in FIXED_WORKTREE_FORBIDDEN:
-        candidate = worktree / f
-        if candidate.exists():
+        if _path_blocks_forbidden_bootstrap(worktree, f):
             found.append(f)
-        if (worktree / ".elis" / f).exists():
-            found.append(f".elis/{f}")
+        elis_path = f".elis/{f}"
+        if _path_blocks_forbidden_bootstrap(worktree, elis_path):
+            found.append(elis_path)
     return found
+
+
+def _resolve_origin_main(repo: Path) -> str | None:
+    """Resolve origin/main with a local-fallback for test harnesses without origin."""
+    if (
+        _git_run(
+            ["show-ref", "--verify", "--quiet", "refs/remotes/origin/main"], repo
+        ).returncode
+        == 0
+    ):
+        local_origin_main = git(["rev-parse", "refs/remotes/origin/main"], repo)
+    else:
+        local_origin_main = ""
+
+    remote_url_check = _git_run(["remote", "get-url", "origin"], repo)
+    if remote_url_check.returncode != 0:
+        if local_origin_main:
+            return local_origin_main
+        print("MISSING_ORIGIN_REMOTE", file=sys.stderr)
+        return None
+
+    if not local_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return None
+
+    remote_result = subprocess.run(
+        ["git", "ls-remote", "origin", "refs/heads/main"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote_line = (
+        remote_result.stdout.strip().splitlines()[0]
+        if remote_result.stdout.strip()
+        else ""
+    )
+    remote_origin_main = remote_line.split()[0] if remote_line else ""
+    if remote_result.returncode != 0 or not remote_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return None
+    if local_origin_main != remote_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return None
+    return local_origin_main
 
 
 def _legacy_agent_check(agent: str) -> int:
@@ -164,6 +238,15 @@ def main() -> int:
     except subprocess.CalledProcessError:
         print("WORKTREE_MISMATCH: repo is not a git repository", file=sys.stderr)
         return 2
+
+    _origin_main = _resolve_origin_main(repo)
+    if not _origin_main:
+        return 8
+
+    repo_dirty = git(["status", "--short"], repo)
+    if repo_dirty:
+        print("CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN", file=sys.stderr)
+        return 9
 
     try:
         current_branch = git(["branch", "--show-current"], worktree)

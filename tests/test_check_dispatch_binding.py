@@ -20,6 +20,23 @@ def _load():
 MODULE = _load()
 
 
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+    )
+
+
+def _init_repo(path: Path) -> None:
+    _git(path, "init")
+    _git(path, "config", "user.email", "test@example.com")
+    _git(path, "config", "user.name", "Test User")
+    (path / "README.md").write_text("base")
+    _git(path, "add", "README.md")
+    _git(path, "commit", "-m", "base bootstrap")
+    base_head = _git(path, "rev-parse", "HEAD").stdout.strip()
+    _git(path, "update-ref", "refs/remotes/origin/main", base_head)
+
+
 def test_is_pe_specific_runtime():
     """PE-specific runtime worktrees should be detected."""
     assert MODULE._is_pe_specific_runtime(
@@ -54,6 +71,7 @@ def test_failure_class_taxonomy():
     assert "WRONG_HEAD" in MODULE.FAILURE_CLASSES
     assert "DIRTY_WORKTREE" in MODULE.FAILURE_CLASSES
     assert "MISSING_ORIGIN_REMOTE" in MODULE.FAILURE_CLASSES
+    assert "CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN" in MODULE.FAILURE_CLASSES
     assert "DETACHED_HEAD" in MODULE.FAILURE_CLASSES
     assert "MISSING_PE_TASK" in MODULE.FAILURE_CLASSES
     assert "DISPATCH_PATH_BLOCKED" in MODULE.FAILURE_CLASSES
@@ -72,6 +90,9 @@ def test_classify_failure():
 
     label = MODULE.classify_failure("MISSING_ORIGIN_REMOTE")
     assert "MISSING_ORIGIN_REMOTE" in label
+
+    label = MODULE.classify_failure("CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN")
+    assert "CANONICAL_REPO_DIRTY_STATE_MASKING_ORIGIN" in label
 
     label = MODULE.classify_failure("UNKNOWN_CODE")
     assert "UNKNOWN_FAILURE" in label
@@ -197,3 +218,43 @@ def test_check_forbidden_files_in_worktree(tmp_path):
     result = MODULE._check_forbidden_files_in_worktree(tmp_path)
     assert "HEARTBEAT.md" in result
     assert ".openclaw" in result
+
+
+def test_check_forbidden_files_allows_ignored_untracked_bootstrap(tmp_path):
+    """Ignored, untracked bootstrap files should not trigger blocking."""
+    _init_repo(tmp_path)
+    (tmp_path / ".gitignore").write_text(
+        "USER.md\nTOOLS.md\nIDENTITY.md\nHEARTBEAT.md\n.openclaw/\nSOUL.md\n"
+    )
+    (tmp_path / "README.md").write_text("ok")
+    (tmp_path / "USER.md").write_text("user")
+    (tmp_path / "TOOLS.md").write_text("tools")
+    (tmp_path / "IDENTITY.md").write_text("identity")
+    (tmp_path / "HEARTBEAT.md").write_text("heartbeat")
+    (tmp_path / "SOUL.md").write_text("soul")
+    (tmp_path / ".openclaw").mkdir()
+    (tmp_path / ".openclaw" / "bootstrap.json").write_text("{}")
+
+    assert MODULE._check_forbidden_files_in_worktree(tmp_path) == []
+
+
+def test_check_forbidden_files_blocks_tracked_staged_unignored_bootstrap(tmp_path):
+    """Tracked, staged, diffed, and unignored bootstrap files must still block."""
+    _init_repo(tmp_path)
+    (tmp_path / "README.md").write_text("base")
+    (tmp_path / "USER.md").write_text("tracked user")
+    _git(tmp_path, "add", "README.md", "USER.md")
+    _git(tmp_path, "commit", "-m", "base bootstrap")
+    base_head = _git(tmp_path, "rev-parse", "HEAD").stdout.strip()
+    _git(tmp_path, "update-ref", "refs/remotes/origin/main", base_head)
+
+    (tmp_path / "USER.md").write_text("tracked user updated")
+    _git(tmp_path, "add", "USER.md")
+    (tmp_path / "HEARTBEAT.md").write_text("staged heartbeat")
+    _git(tmp_path, "add", "HEARTBEAT.md")
+    (tmp_path / "TOOLS.md").write_text("unignored tools")
+
+    result = MODULE._check_forbidden_files_in_worktree(tmp_path)
+    assert "USER.md" in result
+    assert "HEARTBEAT.md" in result
+    assert "TOOLS.md" in result
