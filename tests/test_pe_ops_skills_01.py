@@ -32,6 +32,8 @@ def init_repo(tmp_path: Path):
     (tmp_path / "README.md").write_text("root")
     run(["git", "add", "."], tmp_path)
     run(["git", "commit", "-m", "init"], tmp_path)
+    base_head = run(["git", "rev-parse", "HEAD"], tmp_path).stdout.strip()
+    run(["git", "update-ref", "refs/remotes/origin/main", base_head], tmp_path)
     return tmp_path
 
 

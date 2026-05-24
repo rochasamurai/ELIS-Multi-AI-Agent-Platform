@@ -21,13 +21,20 @@ MODULE = _load()
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True)
+    return subprocess.run(
+        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+    )
 
 
 def _init_repo(path: Path) -> None:
     _git(path, "init")
     _git(path, "config", "user.email", "test@example.com")
     _git(path, "config", "user.name", "Test User")
+    (path / "README.md").write_text("base")
+    _git(path, "add", "README.md")
+    _git(path, "commit", "-m", "base bootstrap")
+    base_head = _git(path, "rev-parse", "HEAD").stdout.strip()
+    _git(path, "update-ref", "refs/remotes/origin/main", base_head)
 
 
 def test_is_pe_specific_runtime():

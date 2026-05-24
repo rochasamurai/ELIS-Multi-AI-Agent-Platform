@@ -190,7 +190,9 @@ def main() -> int:
                     return 1
             else:
                 if ep.name == "HANDOFF.md":
-                    print("FAIL: HANDOFF.md is not accepted as reset acknowledgement evidence.")
+                    print(
+                        "FAIL: HANDOFF.md is not accepted as reset acknowledgement evidence."
+                    )
                     return 1
                 # Non-JSON file: try as markdown
                 content = ep.read_text(encoding="utf-8")

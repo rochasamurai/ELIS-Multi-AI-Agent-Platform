@@ -147,7 +147,11 @@ def verify_canonical_repo_trust(repo_root: Path) -> None:
         text=True,
         check=False,
     )
-    remote_line = remote_result.stdout.strip().splitlines()[0] if remote_result.stdout.strip() else ""
+    remote_line = (
+        remote_result.stdout.strip().splitlines()[0]
+        if remote_result.stdout.strip()
+        else ""
+    )
     remote_origin_main = remote_line.split()[0] if remote_line else ""
     if remote_result.returncode != 0 or not remote_origin_main:
         raise RunnerError("Canonical repo origin/main cannot be resolved from remote.")

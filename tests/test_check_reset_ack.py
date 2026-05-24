@@ -198,7 +198,7 @@ def test_script_with_inline_handoff_ack(tmp_path):
         cwd=str(cwd),
         timeout=30,
     )
-    assert result.returncode != 0, (
-        f"Expected failure, got {result.returncode}\n{result.stdout}\n{result.stderr}"
-    )
+    assert (
+        result.returncode != 0
+    ), f"Expected failure, got {result.returncode}\n{result.stdout}\n{result.stderr}"
     assert "HANDOFF.md" in result.stdout or "HANDOFF.md" in result.stderr

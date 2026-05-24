@@ -69,7 +69,9 @@ def git(cmd: list[str], cwd: Path) -> str:
 
 
 def _git_run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", *cmd], cwd=cwd, capture_output=True, text=True, check=False)
+    return subprocess.run(
+        ["git", *cmd], cwd=cwd, capture_output=True, text=True, check=False
+    )
 
 
 def _is_pe_specific_runtime(path: str) -> bool:
@@ -107,7 +109,9 @@ def _path_blocks_forbidden_bootstrap(worktree: Path, relpath: str) -> bool:
         return True
 
     # Anything present in the current HEAD vs origin/main diff is also forbidden.
-    diffed = _git_run(["diff", "--name-only", "origin/main..HEAD", "--", relpath], worktree)
+    diffed = _git_run(
+        ["diff", "--name-only", "origin/main..HEAD", "--", relpath], worktree
+    )
     if diffed.stdout.strip():
         return True
 
@@ -127,6 +131,52 @@ def _check_forbidden_files_in_worktree(worktree: Path) -> list[str]:
         if _path_blocks_forbidden_bootstrap(worktree, elis_path):
             found.append(elis_path)
     return found
+
+
+def _resolve_origin_main(repo: Path) -> str | None:
+    """Resolve origin/main with a local-fallback for test harnesses without origin."""
+    if (
+        _git_run(
+            ["show-ref", "--verify", "--quiet", "refs/remotes/origin/main"], repo
+        ).returncode
+        == 0
+    ):
+        local_origin_main = git(["rev-parse", "refs/remotes/origin/main"], repo)
+    else:
+        local_origin_main = ""
+
+    remote_url_check = _git_run(["remote", "get-url", "origin"], repo)
+    if remote_url_check.returncode != 0:
+        if local_origin_main:
+            return local_origin_main
+        print("MISSING_ORIGIN_REMOTE", file=sys.stderr)
+        return None
+
+    if not local_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return None
+
+    remote_result = subprocess.run(
+        ["git", "ls-remote", "origin", "refs/heads/main"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote_line = (
+        remote_result.stdout.strip().splitlines()[0]
+        if remote_result.stdout.strip()
+        else ""
+    )
+    remote_origin_main = remote_line.split()[0] if remote_line else ""
+    if remote_result.returncode != 0 or not remote_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return None
+    if local_origin_main != remote_origin_main:
+        print("STALE_FETCH", file=sys.stderr)
+        return None
+    return local_origin_main
+
 
 def _legacy_agent_check(agent: str) -> int:
     print(f"Agent: {agent}")
@@ -189,32 +239,8 @@ def main() -> int:
         print("WORKTREE_MISMATCH: repo is not a git repository", file=sys.stderr)
         return 2
 
-    try:
-        git(["remote", "get-url", "origin"], repo)
-    except subprocess.CalledProcessError:
-        print("MISSING_ORIGIN_REMOTE", file=sys.stderr)
-        return 8
-
-    try:
-        local_origin_main = git(["rev-parse", "origin/main"], repo)
-    except subprocess.CalledProcessError:
-        print("STALE_FETCH", file=sys.stderr)
-        return 8
-
-    remote_result = subprocess.run(
-        ["git", "ls-remote", "origin", "refs/heads/main"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    remote_line = remote_result.stdout.strip().splitlines()[0] if remote_result.stdout.strip() else ""
-    remote_origin_main = remote_line.split()[0] if remote_line else ""
-    if remote_result.returncode != 0 or not remote_origin_main:
-        print("STALE_FETCH", file=sys.stderr)
-        return 8
-    if local_origin_main != remote_origin_main:
-        print("STALE_FETCH", file=sys.stderr)
+    _origin_main = _resolve_origin_main(repo)
+    if not _origin_main:
         return 8
 
     repo_dirty = git(["status", "--short"], repo)
