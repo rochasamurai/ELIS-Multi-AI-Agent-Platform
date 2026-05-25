@@ -21,19 +21,15 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | — |
-| Branch  | — |
-
-> **plan-complete / no active PE. `PE-OPS-CURRENT-PE-STATE-01` merged on `origin/main`.**
+| PE      | PE-OPS-A2A-RUNTIME-01 |
+| Branch  | feature/pe-ops-a2a-runtime-01-clean-local-backbone |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| — | — |
-| — | — |
-
-> no active PE roles.
+| infra-impl-a | Implementer |
+| infra-val-b  | Validator   |
 
 
 ---
@@ -42,6 +38,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
+| PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | implementing | 2026-05-25 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
 | PE-OPS-PM-DISPATCH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-pm-dispatch-01-deterministic-pm-dispatch-wrapper | merged | 2026-05-19 |
 | PE-OPS-DISPATCH-WRAPPER-HARDENING-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-dispatch-wrapper-hardening-01 | merged | 2026-05-19 |
