@@ -1,59 +1,10 @@
 {
+  "current_state": "plan-complete",
   "pe_id": "PE-OPS-A2A-RUNTIME-01",
-  "objective": "Implement a local-only A2A communication backbone for structured agent message exchange (status, reset_ack, task_state, evidence_ref, failure).",
   "branch": "feature/pe-ops-a2a-runtime-01-clean-local-backbone",
-  "baseline": "origin/main @ a61a0a173568bbce7d9446245f8117f237d352bd",
-  "lane": "Strict",
   "implementer": "infra-impl-a",
   "validator": "infra-val-b",
-  "current_state": "gate-2-pending",
-  "thread_id": "1508557746319003780",
-  "session_id": "a848d4fe-7c79-4839-b6cb-630161fc85cd",
-  "file_scope": [
-    "CURRENT_PE.md",
-    ".elis/state/current_pe.json",
-    ".elis/pe/PE-OPS-A2A-RUNTIME-01/PE_TASK.md",
-    ".elis/pe/PE-OPS-A2A-RUNTIME-01/HANDOFF.md"
-  ],
-  "approved_impl_scope": [
-    "docs/governance/ELIS_A2A_Runtime_Spec.md",
-    "schemas/a2a_message.schema.json",
-    "scripts/a2a_local_transport.py",
-    "tests/test_a2a_local_transport.py",
-    ".elis/pe/PE-OPS-A2A-RUNTIME-01/REVIEW.md"
-  ],
-  "runtime_bootstrap_allowlist": [
-    "AGENTS.md",
-    "TOOLS.md",
-    "USER.md",
-    "HEARTBEAT.md",
-    "SOUL.md",
-    "IDENTITY.md",
-    ".openclaw/",
-    "memory/",
-    "skills/",
-    "canvas/"
-  ],
-  "required_rules": [
-    "A2A must not claim governance authority",
-    "A2A must not claim merge authority",
-    "A2A must not bypass PO approval",
-    "A2A must not bypass implementer/validator gates",
-    "A2A must not replace existing PE evidence requirements",
-    "Discord remains PO-facing channel",
-    "Local-only transport in Phase 1"
-  ],
-  "hard_stops": [
-    "no implementation files until PO/Supervisor verify opening commit",
-    "no implementer dispatch",
-    "no validator dispatch",
-    "no sessions_spawn",
-    "no sessions_send",
-    "no runtime/config/service changes",
-    "no OpenClaw/Hermes restart or reload",
-    "no GitHub PR",
-    "no merge"
-  ],
-  "live_dispatch_statement": "Opening phase only. Hard stops active. No dispatch authorised until PO/Supervisor verify this opening commit.",
-  "rollback": "All changes are repository-only. Rollback is git revert of implementation commit or branch abandonment. No service action required."
+  "pr": "457",
+  "merge_sha": "72b0da3e94dab7bd1afc2867c7afadb581dc6828",
+  "note": "plan-complete / no active PE"
 }

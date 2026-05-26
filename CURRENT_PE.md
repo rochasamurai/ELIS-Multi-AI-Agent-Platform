@@ -21,15 +21,18 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | PE-OPS-A2A-RUNTIME-01 |
-| Branch  | feature/pe-ops-a2a-runtime-01-clean-local-backbone |
+| PE      | — |
+| Branch  | — |
+
+> plan-complete / no active PE — PE-OPS-A2A-RUNTIME-01 merged on `origin/main` (PR #457, SHA 72b0da3e94dab7bd1afc2867c7afadb581dc6828)
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| infra-impl-a | Implementer |
-| infra-val-b  | Validator |
+| — | — |
+
+> no active PE roles
 
 
 ---
@@ -38,7 +41,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | gate-2-pending | 2026-05-26 |
+| PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged on `origin/main` | 2026-05-26 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
 | PE-OPS-PM-DISPATCH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-pm-dispatch-01-deterministic-pm-dispatch-wrapper | merged | 2026-05-19 |
 | PE-OPS-DISPATCH-WRAPPER-HARDENING-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-dispatch-wrapper-hardening-01 | merged | 2026-05-19 |
