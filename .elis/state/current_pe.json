@@ -1,10 +1,10 @@
 {
-  "current_state": "plan-complete",
-  "pe_id": "PE-OPS-A2A-RUNTIME-01",
-  "branch": "feature/pe-ops-a2a-runtime-01-clean-local-backbone",
-  "implementer": "infra-impl-a",
-  "validator": "infra-val-b",
-  "pr": "457",
-  "merge_sha": "72b0da3e94dab7bd1afc2867c7afadb581dc6828",
-  "note": "plan-complete / no active PE"
+  "current_state": "planning",
+  "pe_id": "PE-OPS-GITHUB-AGENT-PRODUCTION-01",
+  "branch": "feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path",
+  "implementer": "infra-impl-b",
+  "validator": "infra-val-a",
+  "pr": null,
+  "merge_sha": null,
+  "note": "PE opening committed — opening artefacts only; no implementation, no credential change, no push, no PR, no merge"
 }

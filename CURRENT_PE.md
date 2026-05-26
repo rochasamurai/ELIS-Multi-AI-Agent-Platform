@@ -21,18 +21,15 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | — |
-| Branch  | — |
-
-> plan-complete / no active PE — PE-OPS-A2A-RUNTIME-01 merged on `origin/main` (PR #457, SHA 72b0da3e94dab7bd1afc2867c7afadb581dc6828)
+| PE      | PE-OPS-GITHUB-AGENT-PRODUCTION-01 |
+| Branch  | feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| — | — |
-
-> no active PE roles
+| infra-impl-b | Implementer |
+| infra-val-a | Validator |
 
 
 ---
@@ -41,6 +38,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
+| PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path | planning | 2026-05-26 |
 | PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged on `origin/main` | 2026-05-26 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
 | PE-OPS-PM-DISPATCH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-pm-dispatch-01-deterministic-pm-dispatch-wrapper | merged | 2026-05-19 |
