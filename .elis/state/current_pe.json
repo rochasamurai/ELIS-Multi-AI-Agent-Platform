@@ -1,15 +1,26 @@
 {
-  "pe_id": "\u2014",
-  "objective": "PE-OPS-CURRENT-PE-STATE-01 is merged; no active PE remains.",
-  "branch": "\u2014",
-  "baseline": "origin/main @ 26254d3556526ef9ef59f399f51d5a7c0e837c6a",
-  "lane": "\u2014",
-  "implementer": "\u2014",
-  "validator": "\u2014",
-  "current_state": "plan-complete",
+  "pe_id": "PE-OPS-A2A-RUNTIME-01",
+  "objective": "Implement a local-only A2A communication backbone for structured agent message exchange (status, reset_ack, task_state, evidence_ref, failure).",
+  "branch": "feature/pe-ops-a2a-runtime-01-clean-local-backbone",
+  "baseline": "origin/main @ a61a0a173568bbce7d9446245f8117f237d352bd",
+  "lane": "Strict",
+  "implementer": "infra-impl-a",
+  "validator": "infra-val-b",
+  "current_state": "gate-2-pending",
+  "thread_id": "1508557746319003780",
+  "session_id": "a848d4fe-7c79-4839-b6cb-630161fc85cd",
   "file_scope": [
     "CURRENT_PE.md",
-    ".elis/state/current_pe.json"
+    ".elis/state/current_pe.json",
+    ".elis/pe/PE-OPS-A2A-RUNTIME-01/PE_TASK.md",
+    ".elis/pe/PE-OPS-A2A-RUNTIME-01/HANDOFF.md"
+  ],
+  "approved_impl_scope": [
+    "docs/governance/ELIS_A2A_Runtime_Spec.md",
+    "schemas/a2a_message.schema.json",
+    "scripts/a2a_local_transport.py",
+    "tests/test_a2a_local_transport.py",
+    ".elis/pe/PE-OPS-A2A-RUNTIME-01/REVIEW.md"
   ],
   "runtime_bootstrap_allowlist": [
     "AGENTS.md",
@@ -23,28 +34,26 @@
     "skills/",
     "canvas/"
   ],
-  "required_rules": [],
-  "phase_1_gates": [],
-  "tests": [
-    "tests/test_check_current_pe.py",
-    "tests/test_check_pe_opening_context.py"
+  "required_rules": [
+    "A2A must not claim governance authority",
+    "A2A must not claim merge authority",
+    "A2A must not bypass PO approval",
+    "A2A must not bypass implementer/validator gates",
+    "A2A must not replace existing PE evidence requirements",
+    "Discord remains PO-facing channel",
+    "Local-only transport in Phase 1"
   ],
-  "rollback": "Restore CURRENT_PE.md and .elis/state/current_pe.json to the merged closeout snapshot if needed.",
   "hard_stops": [
-    "do not change runtime/config/auth/service files",
-    "do not restart services",
-    "do not resume PE-OPS-A2A-RUNTIME-01 yet"
+    "no implementation files until PO/Supervisor verify opening commit",
+    "no implementer dispatch",
+    "no validator dispatch",
+    "no sessions_spawn",
+    "no sessions_send",
+    "no runtime/config/service changes",
+    "no OpenClaw/Hermes restart or reload",
+    "no GitHub PR",
+    "no merge"
   ],
-  "live_dispatch_statement": "No active PE remains; the structured state is now a closeout snapshot.",
-  "runtime_bootstrap_policy": "Approved OpenClaw runtime/bootstrap files remain non-blocking only when they are untracked or workspace-local, not staged, not part of the closeout scope, not secret-bearing, not modified tracked repository files, not being committed, and not masking unsafe residue.",
-  "completed_pe": {
-    "pe_id": "PE-OPS-CURRENT-PE-STATE-01",
-    "status": "merged",
-    "branch": "feature/pe-ops-current-pe-state-01",
-    "implementation_commit": "61d30ed934d98027a3d6b2f156e7b7f7552d7f0b",
-    "review_commit": "37f26f793570d853e2d9039c9013f259b96f03f9",
-    "merge_commit": "26254d3556526ef9ef59f399f51d5a7c0e837c6a",
-    "merged_at": "2026-05-20T22:39:16Z",
-    "summary": "Structured current PE state landed and PM dispatch now consumes structured state."
-  }
+  "live_dispatch_statement": "Opening phase only. Hard stops active. No dispatch authorised until PO/Supervisor verify this opening commit.",
+  "rollback": "All changes are repository-only. Rollback is git revert of implementation commit or branch abandonment. No service action required."
 }
