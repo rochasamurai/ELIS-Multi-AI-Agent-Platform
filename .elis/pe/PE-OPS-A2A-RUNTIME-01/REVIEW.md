@@ -1,93 +1,113 @@
 # REVIEW — PE-OPS-A2A-RUNTIME-01
 
-## Validator
-infra-val-a (PO-approved substitution for infra-val-b)
+> Validator: infra-val-b (authoritative/assigned validator)
+> Date: 2026-05-26
+> Implementation commit: 21cc6aa9e6a738eba931a075e1ac09a6c0bf67a1
+> Branch: feature/pe-ops-a2a-runtime-01-clean-local-backbone
+> Implementer: infra-impl-a
+>
+> NOTE: This review supersedes the recovery review produced by infra-val-a
+> (commit c8c601a). infra-val-b is the originally assigned validator per
+> PE_TASK.md and provides the authoritative verdict.
 
-## Validation target commit
-21cc6aa9e6a738eba931a075e1ac09a6c0bf67a1
+---
 
-## Acceptance criteria verdicts
+## Overall Verdict: PASS
 
-| AC | Criterion | Verdict | Evidence |
-|----|-----------|---------|----------|
-| AC-1 | Local A2A transport layer reachable between at least two local agent endpoints without Discord routing | PASS | `test_pm_sends_to_supervisor_receives` exercises a full send→receive round-trip between "pm" and "supervisor" endpoints using only file I/O under `/tmp/elis_a2a/`. No Discord dependency in any code path. All 30 tests pass. |
-| AC-2 | Structured message envelope schema covers: status, reset_ack, task_state, evidence_ref, failure | PASS | `schemas/a2a_message.schema.json` defines `message_type` as `enum: ["status", "reset_ack", "task_state", "evidence_ref", "failure"]`. Spec §4 documents all five types. `TestMessageTypes` parametrises a round-trip for each. |
-| AC-3 | A2A layer does not claim or exercise governance authority | PASS | `A2ATransport.has_governance_authority = False` (class attribute). `test_transport_has_no_governance_authority` verifies. No governance logic in any method. Spec §3 and §5 prohibit it explicitly. |
-| AC-4 | A2A layer does not claim or exercise merge authority | PASS | `A2ATransport.has_merge_authority = False` (class attribute). `test_transport_has_no_merge_authority` and `test_transport_has_no_merge_method` verify. No `merge` method exists. |
-| AC-5 | A2A does not bypass PO approval | PASS | `A2ATransport.can_bypass_po_approval = False`. `test_transport_cannot_bypass_po_approval` verifies. Spec §3 states PO approval gates are enforced by branch protection and CI; A2A carries no approval signals. |
-| AC-6 | A2A does not bypass implementer/validator gate checks | PASS | `A2ATransport.can_bypass_gate_checks = False`. `test_transport_cannot_bypass_gate_checks` verifies. Transport is purely file I/O; no CI interaction of any kind. |
-| AC-7 | A2A does not replace PE evidence requirements | PASS | Spec §2 states the layer "supplements — and never replaces — the existing PE workflow evidence trail." Transport writes only to `/tmp/elis_a2a/` (ephemeral, not committed). No capability to write HANDOFF.md, REVIEW files, or any PE artefact. |
-| AC-8 | No runtime/config/service changes introduced | PASS | Scope diff `e982097f..HEAD` shows exactly 4 new files added, 0 modified. No CI workflows, docker-compose, config files, service definitions, or secret stores changed. Transport mailbox is `/tmp/elis_a2a/` — ephemeral, not committed. |
-| AC-9 | Smoke test confirms message round-trip between at least two agent endpoints locally | PASS | `TestRoundTrip::test_pm_sends_to_supervisor_receives` sends a `status` message from "pm" to "supervisor" and asserts `message_id`, `sender`, `recipient`, `message_type`, `payload`, and `pe_id` all round-trip correctly. 30/30 tests pass. |
+All 10 acceptance criteria are satisfied. 30/30 tests pass. No scope violations
+detected.
 
-## Test run
+---
 
-```
-============================= test session starts ==============================
-platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0
-rootdir: /opt/elis/agent-worktrees/infra-val-a
-configfile: pyproject.toml
-collected 30 items
+## AC-by-AC Verdicts
 
-tests/test_a2a_local_transport.py ..............................         [100%]
+| AC | Criterion (summary) | Verdict | Evidence |
+|----|---------------------|---------|----------|
+| AC-1 | Local A2A transport layer reachable between PM, Supervisor, and Advisor without Discord routing | PASS | `scripts/a2a_local_transport.py` implements file-based transport under `/tmp/elis_a2a/`; no socket, HTTP, or Discord imports; `TestRoundTrip.test_pm_sends_to_supervisor_receives` confirms delivery between named agent endpoints |
+| AC-2 | Structured envelope covers status, reset_ack, task_state, evidence_ref, failure | PASS | `schemas/a2a_message.schema.json` enumerates all five types in `message_type` enum; `_VALID_MESSAGE_TYPES` in transport module matches; `TestMessageTypes` parametrized test exercises all five types |
+| AC-3 | A2A must not claim or exercise governance authority | PASS | `A2ATransport.has_governance_authority = False`; `test_transport_has_no_governance_authority` asserts False; no governance-action methods present; spec §3 and §5 document the constraint |
+| AC-4 | A2A must not claim or exercise merge authority | PASS | `A2ATransport.has_merge_authority = False`; `test_transport_has_no_merge_authority` asserts False; `test_transport_has_no_merge_method` confirms no `merge` method |
+| AC-5 | A2A must not bypass PO approval | PASS | `A2ATransport.can_bypass_po_approval = False`; `test_transport_cannot_bypass_po_approval` asserts False; spec §3 explicitly prohibits bypassing PO approval gates |
+| AC-6 | A2A must not bypass implementer/validator gate checks | PASS | `A2ATransport.can_bypass_gate_checks = False`; `test_transport_cannot_bypass_gate_checks` asserts False; spec §3 explicitly prohibits altering CI gate outcomes |
+| AC-7 | A2A must not replace PE evidence requirements | PASS | Spec §3 table explicitly lists "Replace PE evidence requirements" as a prohibited action; transport carries no file-writing capability outside its own mailbox directory; REVIEW.md, HANDOFF.md, and gate comments remain mandatory as per AGENTS.md |
+| AC-8 | No runtime/config/service changes introduced | PASS | `git diff a61a0a17..21cc6aa9 --name-only` shows only 4 approved implementation files plus opening-phase artefacts (CURRENT_PE.md, current_pe.json, PE_TASK.md, HANDOFF.md); no openclaw.json, CI workflow, service definition, or secret files touched |
+| AC-9 | Smoke test confirms message round-trip between at least two agent endpoints locally | PASS | `TestRoundTrip.test_pm_sends_to_supervisor_receives` sends from `pm` to `supervisor` and verifies message_id, sender, recipient, message_type, payload, and pe_id round-trip intact |
+| AC-10 | Validator independently confirms AC-1–AC-9 with pass verdict committed to REVIEW.md | PASS | This document (infra-val-b, independent run, separate worktree `/opt/elis/agent-worktrees/infra-val-b`) |
 
-============================== 30 passed in 0.13s ==============================
-```
+---
 
-## Scope check
+## Test Evidence
 
-Scope diff `e982097fa6c16a78f23adad3c35543dee8d5b815..21cc6aa9e6a738eba931a075e1ac09a6c0bf67a1`:
-
-```
-A	docs/governance/ELIS_A2A_Runtime_Spec.md
-A	schemas/a2a_message.schema.json
-A	scripts/a2a_local_transport.py
-A	tests/test_a2a_local_transport.py
-
- docs/governance/ELIS_A2A_Runtime_Spec.md | 119 ++++++++++
- schemas/a2a_message.schema.json          |  52 +++++
- scripts/a2a_local_transport.py           | 207 +++++++++++++++++
- tests/test_a2a_local_transport.py        | 382 +++++++++++++++++++++++++++++++
- 4 files changed, 760 insertions(+)
-```
-
-Exactly 4 authorised files added. No modifications. No out-of-scope files.
-
-## Quality gates
+Command run from `/opt/elis/agent-worktrees/infra-val-b`:
 
 ```
-python -m black --check .
-All done! ✨ 🍰 ✨
-241 files would be left unchanged.
-black exit: 0
-
-python -m ruff check .
-All checks passed!
-ruff exit: 0
+python -m pytest tests/test_a2a_local_transport.py -v
 ```
 
-## Runtime/config/service changes
+Result: **30 passed in 0.14s** (0 failed, 0 errors, 0 skipped)
 
-NONE confirmed. Scope diff shows four new files only (governance doc, JSON schema, transport module, test suite). No CI workflow, service configuration, docker-compose, auth profile, or secret store was modified. Transport mailbox at `/tmp/elis_a2a/` is ephemeral and not committed to the repository.
-
-## Agent scope check
+### Test names
 
 ```
-Agent scope clean — no secret-pattern files detected in worktree.
-exit: 0
+tests/test_a2a_local_transport.py::TestSchemaValid::test_minimal_valid_envelope
+tests/test_a2a_local_transport.py::TestSchemaValid::test_envelope_with_pe_id
+tests/test_a2a_local_transport.py::TestSchemaValid::test_broadcast_recipient_accepted
+tests/test_a2a_local_transport.py::TestSchemaInvalid::test_missing_message_id
+tests/test_a2a_local_transport.py::TestSchemaInvalid::test_invalid_message_type
+tests/test_a2a_local_transport.py::TestSchemaInvalid::test_missing_sender
+tests/test_a2a_local_transport.py::TestSchemaInvalid::test_payload_must_be_object
+tests/test_a2a_local_transport.py::TestRoundTrip::test_pm_sends_to_supervisor_receives
+tests/test_a2a_local_transport.py::TestRoundTrip::test_receive_empties_mailbox
+tests/test_a2a_local_transport.py::TestRoundTrip::test_empty_mailbox_returns_empty_list
+tests/test_a2a_local_transport.py::TestMessageTypes::test_each_message_type_round_trips[status]
+tests/test_a2a_local_transport.py::TestMessageTypes::test_each_message_type_round_trips[reset_ack]
+tests/test_a2a_local_transport.py::TestMessageTypes::test_each_message_type_round_trips[task_state]
+tests/test_a2a_local_transport.py::TestMessageTypes::test_each_message_type_round_trips[evidence_ref]
+tests/test_a2a_local_transport.py::TestMessageTypes::test_each_message_type_round_trips[failure]
+tests/test_a2a_local_transport.py::TestMessageTypes::test_status_carries_state_field
+tests/test_a2a_local_transport.py::TestMessageTypes::test_reset_ack_carries_ack_field
+tests/test_a2a_local_transport.py::TestMessageTypes::test_task_state_carries_task_id
+tests/test_a2a_local_transport.py::TestMessageTypes::test_evidence_ref_carries_path
+tests/test_a2a_local_transport.py::TestMessageTypes::test_failure_carries_reason
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_has_no_governance_authority
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_has_no_merge_authority
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_cannot_bypass_po_approval
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_cannot_bypass_gate_checks
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_has_no_approve_method
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_has_no_merge_method
+tests/test_a2a_local_transport.py::TestGovernanceBoundary::test_transport_has_no_grant_authority_method
+tests/test_a2a_local_transport.py::TestListMessages::test_list_does_not_remove_messages
+tests/test_a2a_local_transport.py::TestListMessages::test_list_empty_returns_empty
+tests/test_a2a_local_transport.py::TestListMessages::test_list_then_receive_consistent
 ```
 
-## Overall verdict
+---
 
-PASS
+## Scope Verification
 
-## Findings
+Files changed between baseline (a61a0a17) and implementation commit (21cc6aa9):
 
-All nine acceptance criteria are satisfied. Key observations:
+- `docs/governance/ELIS_A2A_Runtime_Spec.md` — approved scope
+- `schemas/a2a_message.schema.json` — approved scope
+- `scripts/a2a_local_transport.py` — approved scope
+- `tests/test_a2a_local_transport.py` — approved scope
+- `.elis/pe/PE-OPS-A2A-RUNTIME-01/PE_TASK.md` — opening-phase artefact (expected)
+- `.elis/pe/PE-OPS-A2A-RUNTIME-01/HANDOFF.md` — opening-phase artefact (expected)
+- `.elis/state/current_pe.json` — opening-phase artefact (expected)
+- `CURRENT_PE.md` — opening-phase artefact (expected)
 
-- The transport correctly models two distinct agent endpoints ("pm" and "supervisor") communicating via file-based mailboxes with no external dependencies.
-- All five required message types (`status`, `reset_ack`, `task_state`, `evidence_ref`, `failure`) are enumerated in the schema and exercised by parametrised tests.
-- Governance constraints are verified structurally: `has_governance_authority`, `has_merge_authority`, `can_bypass_po_approval`, and `can_bypass_gate_checks` are explicit `False` class attributes, and the absence of `approve`, `merge`, and `grant_authority` methods is asserted.
-- Schema validation uses `jsonschema` when available with a built-in fallback; tests cover both valid and invalid envelopes (missing fields, wrong `message_type`, wrong `payload` type).
-- Scope is perfectly contained: exactly the 4 authorised files, no other modifications.
-- No pre-existing defects introduced or observed that require addition to the §11 register.
+No runtime files, CI workflows, service configs, secret stores, or out-of-scope files were modified.
+
+---
+
+## Constraint Checklist
+
+| Constraint | Status |
+|------------|--------|
+| A2A transport does not claim governance authority | PASS — class attribute `has_governance_authority = False`, tested |
+| A2A transport does not claim merge authority | PASS — class attribute `has_merge_authority = False`, tested |
+| A2A does not bypass PO approval | PASS — class attribute `can_bypass_po_approval = False`, tested |
+| A2A does not bypass implementer/validator gates | PASS — class attribute `can_bypass_gate_checks = False`, tested |
+| Transport is local-only (no Discord routing) | PASS — file-based /tmp mailbox; no socket/http/discord imports |
+| No runtime/config/service/auth/provider changes | PASS — zero such files in diff |
+| No approve/merge/grant_authority methods | PASS — hasattr tests confirm absence |

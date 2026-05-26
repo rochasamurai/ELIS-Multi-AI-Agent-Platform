@@ -5,10 +5,8 @@
   "baseline": "origin/main @ a61a0a173568bbce7d9446245f8117f237d352bd",
   "lane": "Strict",
   "implementer": "infra-impl-a",
-  "validator": "infra-val-a",
-  "validator_original_assigned": "infra-val-b",
-  "validator_substitution": "PO-approved 2026-05-26 — infra-val-b recovery/auth/binding path during PE-OPS-A2A-RUNTIME-01",
-  "current_state": "validated",
+  "validator": "infra-val-b",
+  "current_state": "gate-2-pending",
   "thread_id": "1508557746319003780",
   "session_id": "a848d4fe-7c79-4839-b6cb-630161fc85cd",
   "file_scope": [

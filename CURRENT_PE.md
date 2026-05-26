@@ -29,7 +29,7 @@
 | Agent | Role |
 |-------|------|
 | infra-impl-a | Implementer |
-| infra-val-a  | Validator (PO-approved substitute for infra-val-b) |
+| infra-val-b  | Validator |
 
 
 ---
@@ -38,7 +38,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-a (subst. infra-val-b, PO-approved) | feature/pe-ops-a2a-runtime-01-clean-local-backbone | validated | 2026-05-26 |
+| PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | gate-2-pending | 2026-05-26 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
 | PE-OPS-PM-DISPATCH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-pm-dispatch-01-deterministic-pm-dispatch-wrapper | merged | 2026-05-19 |
 | PE-OPS-DISPATCH-WRAPPER-HARDENING-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-dispatch-wrapper-hardening-01 | merged | 2026-05-19 |
@@ -152,7 +152,7 @@
 | PE-ARCH-11      | architecture   | infra-impl-b         | infra-val-a        | feature/pe-arch-11-inert-task-flow-controller-prototype                | merged          | 2026-05-03   |
 | PE-OPS-CONFIG-01 | config          | infra-impl-b         | infra-val-a        | feature/pe-ops-config-01-pe-specific-agent-profile-binding-procedure | merged          | 2026-05-04   |
 | PE-OPS-PO-ADVISOR-01 | ops        | infra-impl-b         | infra-val-a        | feature/pe-ops-po-advisor-01-deploy-elis-po-advisor-on-hermes        | merged          | 2026-05-06   |
-| PE-OPS-ADVISOR-01 | ops         | infra-impl-a         | infra-val-b        | feature/pe-ops-advisor-01-implement-elis-advisor-on-hermes           | merged          | 2026-05-09   |
+| PE-OPS-ADVISOR-01 | advisor     | infra-impl-a         | infra-val-b        | feature/pe-ops-advisor-01-implement-elis-advisor-on-hermes           | merged          | 2026-05-09   |
 | PE-AGT-01       | infra          | infra-impl-a         | infra-val-b        | feature/pe-agt-01-pm-agent-review                                       | blocked         | 2026-05-02   |
 
 Valid status values:

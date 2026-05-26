@@ -25,6 +25,14 @@ CLOSEOUT_MARKERS = (
     "no active PE roles",
 )
 
+A2A_RUNTIME_ACTIVE_MARKERS = (
+    "PE-OPS-A2A-RUNTIME-01",
+    "feature/pe-ops-a2a-runtime-01-clean-local-backbone",
+    "infra-impl-a",
+    "infra-val-a",
+    "gate-2-pending",
+)
+
 
 def _matches_active_state(text: str) -> bool:
     return all(marker in text for marker in ACTIVE_MARKERS)
@@ -34,10 +42,18 @@ def _matches_closeout_state(text: str) -> bool:
     return all(marker in text for marker in CLOSEOUT_MARKERS)
 
 
+def _matches_a2a_runtime_active_state(text: str) -> bool:
+    return all(marker in text for marker in A2A_RUNTIME_ACTIVE_MARKERS)
+
+
 def test_current_pe_marks_the_active_pe_and_roles() -> None:
     text = Path("CURRENT_PE.md").read_text(encoding="utf-8")
 
-    assert _matches_active_state(text) or _matches_closeout_state(text)
+    assert (
+        _matches_active_state(text)
+        or _matches_closeout_state(text)
+        or _matches_a2a_runtime_active_state(text)
+    )
 
 
 def test_current_pe_state_file_matches_current_pe_md() -> None:
