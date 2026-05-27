@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# GitHub App installation-token launcher for ELIS GitHub Agent.
+# Obtains a short-lived installation access token via the GitHub App JWT flow
+# and hands off to `gh` with GH_TOKEN / GITHUB_TOKEN set. No credentials are
+# ever printed, echoed, or written to disk.
+set -euo pipefail
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Source credential metadata from the well-known secrets file
+# ──────────────────────────────────────────────────────────────────────────────
+_CREDENTIAL_FILE="/opt/elis/secrets/github-agent.env"
+
+if [[ ! -f "$_CREDENTIAL_FILE" || ! -r "$_CREDENTIAL_FILE" ]]; then
+    echo "FAIL: missing or unreadable credential file: $_CREDENTIAL_FILE" >&2
+    exit 1
+fi
+
+# shellcheck source=/dev/null
+source "$_CREDENTIAL_FILE"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. Validate all three required metadata variables are non-empty
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ -z "${GITHUB_APP_ID:-}" || \
+      -z "${GITHUB_APP_INSTALLATION_ID:-}" || \
+      -z "${GITHUB_APP_PRIVATE_KEY_PATH:-}" ]]; then
+    echo "FAIL: missing or unreadable credential file: required variable(s) not set (GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, GITHUB_APP_PRIVATE_KEY_PATH)" >&2
+    exit 1
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. Validate the private key file is readable
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ ! -f "$GITHUB_APP_PRIVATE_KEY_PATH" || ! -r "$GITHUB_APP_PRIVATE_KEY_PATH" ]]; then
+    echo "FAIL: private key not readable: $GITHUB_APP_PRIVATE_KEY_PATH" >&2
+    exit 1
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. Verify python3 and the cryptography package are available
+# ──────────────────────────────────────────────────────────────────────────────
+if ! command -v python3 &>/dev/null; then
+    echo "FAIL: python3 is not installed. Install Python 3.8+ to use this launcher." >&2
+    exit 1
+fi
+
+if ! python3 -c "import cryptography" 2>/dev/null; then
+    echo "FAIL: Python 'cryptography' package is not installed. Run: pip install cryptography" >&2
+    exit 1
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. Generate a GitHub App JWT (RS256) — captured in a variable, never printed
+#    iss = GITHUB_APP_ID, iat = now-60, exp = now+600
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Export metadata (non-secret identifiers) so the python3 subprocess can read them.
+export GITHUB_APP_ID
+export GITHUB_APP_PRIVATE_KEY_PATH
+
+_jwt=$(python3 - <<'PYEOF'
+import sys, os, time, json, base64
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.backends import default_backend
+
+app_id   = os.environ["GITHUB_APP_ID"]
+key_path = os.environ["GITHUB_APP_PRIVATE_KEY_PATH"]
+
+now = int(time.time())
+header  = {"alg": "RS256", "typ": "JWT"}
+payload = {"iss": app_id, "iat": now - 60, "exp": now + 600}
+
+def b64url(data):
+    if isinstance(data, dict):
+        data = json.dumps(data, separators=(",", ":")).encode()
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+with open(key_path, "rb") as fh:
+    private_key = serialization.load_pem_private_key(
+        fh.read(), password=None, backend=default_backend()
+    )
+
+signing_input = f"{b64url(header)}.{b64url(payload)}".encode()
+signature = private_key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
+print(f"{signing_input.decode()}.{b64url(signature)}", end="")
+PYEOF
+) || { echo "FAIL: JWT generation failed" >&2; exit 1; }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. Exchange JWT for a short-lived installation access token
+# ──────────────────────────────────────────────────────────────────────────────
+_response=$(curl -sf \
+    -X POST \
+    -H "Authorization: Bearer ${_jwt}" \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "https://api.github.com/app/installations/${GITHUB_APP_INSTALLATION_ID}/access_tokens" \
+) || { unset _jwt; echo "FAIL: GitHub API request for installation token failed" >&2; exit 1; }
+
+# JWT is no longer needed — clear immediately
+unset _jwt
+
+if [[ -z "$_response" ]]; then
+    echo "FAIL: GitHub API returned an empty response" >&2
+    exit 1
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. Extract .token from the JSON response via python3 — clear response after
+# ──────────────────────────────────────────────────────────────────────────────
+_token=$(printf '%s' "$_response" | python3 -c "
+import sys, json
+data = json.loads(sys.stdin.read())
+tok = data.get('token', '')
+if not tok:
+    sys.exit(1)
+print(tok, end='')
+") || { unset _response; echo "FAIL: could not extract token from GitHub API response" >&2; exit 1; }
+
+# Response is no longer needed — clear immediately
+unset _response
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. Set up an isolated GH_CONFIG_DIR so gh never reads ambient host credentials
+# ──────────────────────────────────────────────────────────────────────────────
+: "${WORKSPACE_DIR:=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && cd .. && pwd)}"
+GH_CONFIG_DIR="${WORKSPACE_DIR}/.config/gh"
+mkdir -p "$GH_CONFIG_DIR"
+chmod 700 "$GH_CONFIG_DIR"
+export GH_CONFIG_DIR
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 10. Export authentication tokens — unset the local variable immediately after
+# ──────────────────────────────────────────────────────────────────────────────
+export GH_TOKEN="$_token"
+export GITHUB_TOKEN="$_token"
+unset _token
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 11. Hand off to gh — replaces this process
+# ──────────────────────────────────────────────────────────────────────────────
+exec gh "$@"
