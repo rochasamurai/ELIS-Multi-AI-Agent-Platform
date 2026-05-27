@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# GitHub Agent launcher:
+# - sources dedicated bot credentials from host-secure storage
+# - isolates gh config to this GitHub-agent workspace
+# - avoids fallback to the user's ambient ~/.config/gh
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SECRETS_FILE="/opt/elis/secrets/github-agent.env"
+CONFIG_DIR="$WORKSPACE_DIR/.config/gh"
+
+if [[ ! -r "$SECRETS_FILE" ]]; then
+  echo "FAIL: missing GitHub Agent credential file: $SECRETS_FILE" >&2
+  exit 1
+fi
+
+mkdir -p "$CONFIG_DIR"
+chmod 700 "$CONFIG_DIR"
+
+# Load only the dedicated bot token(s) from secure host storage.
+set -a
+# shellcheck disable=SC1090
+source "$SECRETS_FILE"
+set +a
+
+# Keep this agent isolated from the ambient gh config and keyring fallback.
+export GH_CONFIG_DIR="$CONFIG_DIR"
+export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+export GITHUB_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+
+if [[ -z "${GH_TOKEN:-}" ]]; then
+  echo "FAIL: GitHub Agent token is empty after sourcing $SECRETS_FILE" >&2
+  exit 1
+fi
+
+exec gh "$@"
