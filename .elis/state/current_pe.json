@@ -1,10 +1,8 @@
 {
-  "current_state": "merged",
-  "pe_id": "PE-OPS-GITHUB-AGENT-PRODUCTION-01",
-  "branch": "feature/pe-ops-github-agent-production-01-github-app-launcher",
+  "current_state": "implementing",
+  "pe_id": "PE-OPS-GITHUB-AGENT-PRODUCTION-02",
+  "branch": "feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree",
   "implementer": "infra-impl-b",
   "validator": "infra-val-a",
-  "pr": 459,
-  "merge_sha": "9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1",
-  "note": "Phase 1 merged — PR #459, merge SHA 9a2b31a; infra-val-a PASS (e2020754); bin/gh-agent GitHub App installation-token launcher on main. Phases 2 (linked worktree), 4 (sudoers), 5 (enablement) pending separate PO approval."
+  "note": "Scope correction applied (PM-CHORE-105, e940855). Full productionisation scope: PHASE_2_WORKTREE_REBUILD, PHASE_3_EXECUTION_BOUNDARY, PHASE_4_OPENCLAW_ENABLEMENT, PHASE_5_LIVE_AUTH_VALIDATION, PHASE_6_PRODUCTION_READINESS. RESET_BINDING_ACK_V1 and PE_OPENING_V1 issued. Blocked on PHASE_2_WORKTREE_REBUILD — awaiting PO approval. NO_PHASE_2_MUTATION_WITHOUT_PO_APPROVAL hard stop in effect."
 }
