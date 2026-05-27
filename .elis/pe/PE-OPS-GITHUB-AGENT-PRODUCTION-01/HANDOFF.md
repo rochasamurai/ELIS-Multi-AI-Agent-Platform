@@ -8,20 +8,19 @@ This PE productionises the GitHub Agent using the ELIS GitHub App installation-t
 | Phase | Description | Status |
 |-------|-------------|--------|
 | Phase 0 | Evidence preservation | COMPLETE — sanitised branch pushed to origin |
-| Phase 1 | `bin/gh-agent` GitHub App launcher | IMPLEMENTED — commit `2f67f8c`, not yet pushed |
-| Phase 2 | Linked worktree rebuild | PENDING — awaiting Phase 1 merge |
-| Phase 4 | Sudoers rule for `elis-github` wrapper | PENDING — PO approval required |
-| Phase 5 | Validation and OpenClaw enablement | PENDING — PO approval required |
+| Phase 1 | `bin/gh-agent` GitHub App launcher | MERGED — PR #459, merge SHA `9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1`, infra-val-a PASS (e2020754) |
+| Phase 2 | Linked worktree rebuild | PENDING — requires separate PO approval |
+| Phase 4 | Sudoers rule for `elis-github` wrapper | PENDING — requires separate PO approval |
+| Phase 5 | Validation and OpenClaw enablement | PENDING — requires separate PO approval |
 
 ## Secret provisioning (PO-provisioned, 2026-05-27)
 - `/opt/elis/secrets/elis-github.private-key.pem`: `elis-github:elis-github-secrets`, mode 640
 - `/opt/elis/secrets/github-agent.env`: contains `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`
 
 ## Known remaining blockers
-- `bin/gh-agent` feature branch not yet pushed or merged to `origin/main`.
-- Standalone clone at `/opt/elis/agent-worktrees/github-agent` not yet replaced by linked worktree.
-- Sudoers rule for `elis-github` execution wrapper not yet created (required for live auth validation).
-- OpenClaw config edit requires Supervisor path — PM must not edit `openclaw.json` directly.
+- Standalone clone at `/opt/elis/agent-worktrees/github-agent` not yet replaced by linked worktree (Phase 2 — pending PO approval).
+- Sudoers rule for `elis-github` execution wrapper not yet created (Phase 4 — required for live auth validation, pending PO approval).
+- OpenClaw config edit requires Supervisor path — PM must not edit `openclaw.json` directly (Phase 5).
 
 ## Design decisions
 - Production auth model: GitHub App installation-token only. No PAT, no `gh auth login`, no ambient `rochasamurai` auth.
@@ -39,9 +38,11 @@ This PE productionises the GitHub Agent using the ELIS GitHub App installation-t
 - If any hard stop is violated, PM halts and notifies PO before any further action.
 
 ## Status packet
-- Base: `origin/main` @ `89b16beca9310790b5bef20bd5da4580bd9b1678`
+- Base: `origin/main` @ `9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1` (post-merge)
 - Implementation branch: `feature/pe-ops-github-agent-production-01-github-app-launcher`
-- Implementation commit: `2f67f8c556d9ec92a99c1a9aa78f766045a1b50e`
+- Implementation commit: `874adc7bad571bf61c35b82e0bc9086d318433ad` (rebased from `2f67f8c`)
+- Validator commit: `e202075412828fc9cff4221e9772f72c8c4ead73`
+- Merge commit: `9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1` (PR #459)
 - Implementer: `infra-impl-b`
 - Validator: `infra-val-a`
 - PM role: coordination only

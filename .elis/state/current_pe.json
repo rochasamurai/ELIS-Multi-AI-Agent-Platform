@@ -1,10 +1,10 @@
 {
-  "current_state": "gate-1-pending",
+  "current_state": "merged",
   "pe_id": "PE-OPS-GITHUB-AGENT-PRODUCTION-01",
   "branch": "feature/pe-ops-github-agent-production-01-github-app-launcher",
   "implementer": "infra-impl-b",
   "validator": "infra-val-a",
-  "pr": null,
-  "merge_sha": null,
-  "note": "bin/gh-agent implemented (commit 2f67f8c) — GitHub App installation-token model; Supervisor verification PASS; pending PO push approval and validator dispatch"
+  "pr": 459,
+  "merge_sha": "9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1",
+  "note": "Phase 1 merged — PR #459, merge SHA 9a2b31a; infra-val-a PASS (e2020754); bin/gh-agent GitHub App installation-token launcher on main. Phases 2 (linked worktree), 4 (sudoers), 5 (enablement) pending separate PO approval."
 }

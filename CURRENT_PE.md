@@ -21,15 +21,14 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | PE-OPS-GITHUB-AGENT-PRODUCTION-01 |
-| Branch  | feature/pe-ops-github-agent-production-01-github-app-launcher |
+| PE      | — |
+| Branch  | — |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| infra-impl-b | Implementer |
-| infra-val-a | Validator |
+| — | — |
 
 
 ---
@@ -38,7 +37,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | gate-1-pending | 2026-05-27 |
+| PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | merged | 2026-05-27 |
 | PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged on `origin/main` | 2026-05-26 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
 | PE-OPS-PM-DISPATCH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-pm-dispatch-01-deterministic-pm-dispatch-wrapper | merged | 2026-05-19 |
@@ -272,6 +271,7 @@ PM housekeeping entries (prefix `PM-CHORE-XX`):
 | PM-CHORE-100 | Opened PE-OPS-GITHUB-AGENT-ENFORCEMENT-01 (Enforce GitHub Agent Path for GitHub Operations) with `infra-impl-a` as Implementer and `infra-val-b` as Validator per alternation rule. Opening packet only: CURRENT_PE.md and PE task packet updated; no registry/status corrections beyond the opening row; no secret/token/permission/config changes, no PM direct GitHub writes, no PE-specific runtime worktrees. | 2026-05-10 |
 | PM-CHORE-101 | Opened PE-OPS-A2A-01 (Phase-1 A2A Communication Matrix) on clean baseline branch `feature/pe-ops-a2a-01-phase-1-communication-matrix-clean-opening` from `origin/main` at `20070320566b9c587eb6842598da74d74836e744`. Scope: Strict lane, Phase 1 protocol/spec metadata only, local-only A2A communication boundaries, and read-only governance/evidence rules; no runtime deployment, no config/auth/service changes, and no live routing changes. | 2026-05-17 |
 | PM-CHORE-102 | Closed PE-OPS-A2A-01 as merged (PR #442, merge SHA `da8abcfb373ebdf65a2bf4d1a71953612ee83091`). Plan-complete mode restored: PE and Branch cleared; no active PE; PE-OPS-A2A-01 registry row updated to merged. Follow-up item preserved for future cleanup only: PE-OPS-WORKTREE-BINDING-02 — Enforce Fixed Worktree Dispatch Gates. | 2026-05-17 |
+| PM-CHORE-103 | Closed PE-OPS-GITHUB-AGENT-PRODUCTION-01 Phase 1 as merged (PR #459, merge SHA `9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1`, infra-val-a PASS at e2020754). `bin/gh-agent` GitHub App installation-token launcher is now on `main`. Plan-complete mode restored: PE and Branch cleared; no active PE; registry row updated to merged. Phases 2 (linked worktree rebuild), 4 (sudoers rule for elis-github wrapper), and 5 (live auth validation and OpenClaw enablement) remain pending — each requires separate PO approval before execution. | 2026-05-27 |
 
 
 Alternation rule:
