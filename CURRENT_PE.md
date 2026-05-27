@@ -22,7 +22,7 @@
 | Field   | Value |
 |---------|-------|
 | PE      | PE-OPS-GITHUB-AGENT-PRODUCTION-01 |
-| Branch  | feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path |
+| Branch  | feature/pe-ops-github-agent-production-01-github-app-launcher |
 
 ## Agent roles
 
@@ -38,7 +38,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path | planning | 2026-05-26 |
+| PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | gate-1-pending | 2026-05-27 |
 | PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged on `origin/main` | 2026-05-26 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
 | PE-OPS-PM-DISPATCH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-pm-dispatch-01-deterministic-pm-dispatch-wrapper | merged | 2026-05-19 |

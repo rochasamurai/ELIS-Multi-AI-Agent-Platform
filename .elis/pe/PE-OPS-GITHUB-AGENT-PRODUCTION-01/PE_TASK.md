@@ -1,58 +1,57 @@
-# PE-OPS-GITHUB-AGENT-PRODUCTION-01 — Restore and Productionise GitHub Agent Write Path
+# PE-OPS-GITHUB-AGENT-PRODUCTION-01 — Productionise GitHub Agent via GitHub App Installation-Token Auth
 
 ## PE_ID
 PE-OPS-GITHUB-AGENT-PRODUCTION-01
 
 ## Objective
-Restore and productionise the GitHub Agent write path so ELIS has a verified, least-privilege, auditable GitHub operation route using the intended `elis-git-bot` identity, not ambient `rochasamurai` credentials.
+Productionise the GitHub Agent so ELIS has a verified, least-privilege, auditable GitHub operation route using the ELIS GitHub App installation-token model (App: "ELIS GitHub", ID: 3884378, Installation: 136081387), not a long-lived PAT and not ambient `rochasamurai` credentials. `bin/gh-agent` generates a short-lived installation access token at runtime; no token or private key is ever printed or persisted.
 
 ## Opening packet
 - Lane: Strict
 - Baseline HEAD: `904342cfd02ce85dcc9d4f9f05f96eef3e80d530`
-- Branch: `feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path`
+- Branch: `feature/pe-ops-github-agent-production-01-github-app-launcher`
 - Implementer: `infra-impl-b`
 - Validator: `infra-val-a`
 - Thread: `1508908981849034833`
 
 ## Scope
-- Restore `/opt/elis/secrets/github-agent.env` or approved credential mount
-- Fix GitHub Agent `GH_CONFIG_DIR` permissions so `gh` commands succeed from the agent process
-- Verify `elis-git-bot <elis-git-bot@electoralintegrity.org>` as the canonical Git identity for all GitHub Agent operations
-- Verify GitHub Agent worktree binding and reset/binding acknowledgement
-- Enable/spawn GitHub Agent through the approved route (OpenClaw session or equivalent)
-- Perform read-only GitHub readiness checks (e.g. `gh auth status`, `gh repo view`) to confirm the path is clean
+- `bin/gh-agent`: implement GitHub App installation-token launcher (DONE — commit 2f67f8c)
+- `/opt/elis/secrets/github-agent.env`: must contain `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_PATH` (PO-provisioned)
+- GitHub App private key at `GITHUB_APP_PRIVATE_KEY_PATH`: owned by `elis-github:elis-github-secrets`, mode 640 (PO-provisioned)
+- Rebuild `github-agent` as a linked worktree (Phase 2 — pending merge)
+- Create sudoers rule for `elis-github` execution wrapper (Phase 4 — pending PO approval)
+- Enable GitHub Agent in OpenClaw after worktree and launcher are correct (Phase 5 — pending PO approval)
+- Validate read-only GitHub App auth before any write operation
 - Push/create PR only after explicit PO approval obtained in this thread
 - No merge without separate PO approval
 
 ## Out of scope
+- No long-lived PAT as production auth path
+- No `gh auth login` as production path
+- No ambient `rochasamurai` auth fallback
 - No credential creation or copying by agents
 - No branch protection changes
 - No merge automation changes
-- No OpenClaw/Hermes config changes outside the GitHub Agent credential mount
-- No changes to any other agent's credentials or identity
-- No GitHub Agent worktree reset/cleanup during opening phase
 
 ## Acceptance criteria
 
 | AC | Criterion |
 |----|-----------|
-| AC-1 | `/opt/elis/secrets/github-agent.env` (or approved credential mount) is present, readable by the GitHub Agent process, and contains a valid `GH_TOKEN` for `elis-git-bot`. |
-| AC-2 | `GH_CONFIG_DIR` is set to an agent-owned path with correct permissions; `gh auth status` exits 0 and reports `elis-git-bot` as the authenticated identity. |
-| AC-3 | Git identity is confirmed as `elis-git-bot <elis-git-bot@electoralintegrity.org>` for commits and operations in the GitHub Agent worktree. |
-| AC-4 | GitHub Agent is enabled in the approved runtime and can be spawned via the approved route without error. |
-| AC-5 | GitHub Agent worktree binding is verified and a reset/binding acknowledgement is committed to the PE artefact directory. |
-| AC-6 | Read-only GitHub readiness check passes: `gh repo view rochasamurai/elis` (or equivalent canonical repo) returns without error. |
-| AC-7 | No ambient `rochasamurai` GitHub writes are observed during or after the PE; any residual ambient credential is identified and documented. |
+| AC-1 | `/opt/elis/secrets/github-agent.env` is present, readable by the `elis-github` process, and contains `GITHUB_APP_ID=3884378`, `GITHUB_APP_INSTALLATION_ID=136081387`, and `GITHUB_APP_PRIVATE_KEY_PATH` pointing to the provisioned private key. |
+| AC-2 | `/opt/elis/secrets/elis-github.private-key.pem` is present, owned by `elis-github:elis-github-secrets`, mode 640, and readable by the `elis-github` process. |
+| AC-3 | `bin/gh-agent` generates a short-lived GitHub App installation access token via RS256 JWT exchange; the token is never printed, written to disk, or persisted beyond the `gh` subprocess. |
+| AC-4 | `GH_CONFIG_DIR` is isolated to the GitHub Agent workspace; no ambient `rochasamurai` keyring or `~/.config/gh` is used. |
+| AC-5 | GitHub Agent linked worktree is rebuilt from `origin/main` with correct ownership (`elis-github:elis-github`) after merge. |
+| AC-6 | Read-only GitHub App auth validation passes: installation repository access confirmed without push or write. |
+| AC-7 | No ambient `rochasamurai` GitHub operations are performed by the GitHub Agent; isolation is verified. |
 | AC-8 | Validator (`infra-val-a`) independently confirms AC-1 through AC-7 with PASS verdict and evidence committed to `.elis/pe/PE-OPS-GITHUB-AGENT-PRODUCTION-01/REVIEW.md`. |
 
-## Known starting blockers
-- GitHub Agent registered but not enabled.
-- Credential/env file missing: `/opt/elis/secrets/github-agent.env`
-- GitHub Agent `GH_CONFIG_DIR` permission issue.
-- Intended Git identity: `elis-git-bot <elis-git-bot@electoralintegrity.org>`
-- Ambient `gh` identity previously observed: `rochasamurai`
-- GitHub Agent fresh session/spawn/readiness path blocked.
-- PR #457 required manual PO GitHub exception due to the above blockers.
+## Known starting blockers (at PE open — updated 2026-05-27)
+- ~~Credential/env file missing~~ — PO-provisioned with GitHub App metadata.
+- ~~GitHub Agent not enabled~~ — deferred to Phase 5 pending launcher merge and worktree rebuild.
+- Standalone clone at `/opt/elis/agent-worktrees/github-agent` not yet replaced by linked worktree.
+- Sudoers rule for `elis-github` execution wrapper not yet created.
+- `bin/gh-agent` feature branch not yet pushed/merged to main.
 
 ## Implementation boundaries
 - Write path: repository files only within the approved file scope for the opening phase
@@ -71,10 +70,12 @@ Restore and productionise the GitHub Agent write path so ELIS has a verified, le
 - `.elis/pe/PE-OPS-GITHUB-AGENT-PRODUCTION-01/HANDOFF.md`
 
 ## Approved implementation file scope (post-opening, requires PM authorisation to unlock)
-- `/opt/elis/secrets/github-agent.env` (credential restore — PO action, not agent)
-- `openclaw/openclaw.json` (GitHub Agent enable — requires PO approval)
+- `bin/gh-agent` (DONE — commit 2f67f8c on feature branch, pending push/merge)
+- `/opt/elis/secrets/github-agent.env` (PO-provisioned with GitHub App metadata — agents must not edit)
+- `/opt/elis/secrets/elis-github.private-key.pem` (PO-provisioned — agents must not read or print)
+- OpenClaw config (GitHub Agent enable — requires PO approval and Supervisor path)
 - `.elis/pe/PE-OPS-GITHUB-AGENT-PRODUCTION-01/REVIEW.md` (validator-owned)
-- Any governance/runbook doc for the restored GitHub Agent path
+- Any governance/runbook doc for the GitHub App launcher operational path
 
 ## Validation approach
 - Validator (`infra-val-a`) runs independently from `infra-val-a` worktree
@@ -84,10 +85,11 @@ Restore and productionise the GitHub Agent write path so ELIS has a verified, le
 ## Risks
 | Risk | Mitigation |
 |------|-----------|
-| `github-agent.env` must be recreated by PO manually (agent cannot create credentials) | PO pre-flight: create the file with a valid `elis-git-bot` PAT before implementation starts |
-| `GH_CONFIG_DIR` fix may require service restart | Gate: implementer documents the fix; PO approves restart separately |
-| `elis-git-bot` PAT may be expired | PO verifies token validity before marking AC-1 complete |
-| Residual `rochasamurai` ambient auth may re-appear if env is not isolated | Implementer must confirm GitHub Agent process uses its own `GH_CONFIG_DIR` and not the system default |
+| Private key read requires `elis-github` user — `samurai` cannot access it | All live auth validation runs as `elis-github` via the sudoers execution wrapper (Phase 4) |
+| GitHub App installation token exchange is a live API call — cannot be unit-tested offline | Static + fail-closed checks completed; live validation gated on PO approval (Phase 5) |
+| Linked worktree rebuild requires removal of standalone clone — destructive | PO approval required per-step; linked backup preserved at `github-agent.linked-backup.20260508T141916` |
+| OpenClaw config edit requires Supervisor path (unverified schema risk) | PM must not edit `openclaw.json`; route via Supervisor only |
+| Residual `rochasamurai` ambient auth may re-appear if `GH_CONFIG_DIR` is not isolated | `bin/gh-agent` exports `GH_CONFIG_DIR` to isolated workspace path; no keyring fallback |
 
 ## Rollback / safety notes
 - All repository changes are reversible via `git revert` or branch abandonment

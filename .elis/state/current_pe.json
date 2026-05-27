@@ -1,10 +1,10 @@
 {
-  "current_state": "planning",
+  "current_state": "gate-1-pending",
   "pe_id": "PE-OPS-GITHUB-AGENT-PRODUCTION-01",
-  "branch": "feature/pe-ops-github-agent-production-01-restore-productionise-github-agent-write-path",
+  "branch": "feature/pe-ops-github-agent-production-01-github-app-launcher",
   "implementer": "infra-impl-b",
   "validator": "infra-val-a",
   "pr": null,
   "merge_sha": null,
-  "note": "PE opening committed — opening artefacts only; no implementation, no credential change, no push, no PR, no merge"
+  "note": "bin/gh-agent implemented (commit 2f67f8c) — GitHub App installation-token model; Supervisor verification PASS; pending PO push approval and validator dispatch"
 }
