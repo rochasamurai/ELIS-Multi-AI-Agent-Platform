@@ -21,15 +21,14 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | PE-OPS-GITHUB-AGENT-PRODUCTION-02 |
-| Branch  | feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree |
+| PE      | — |
+| Branch  | — |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| infra-impl-b | Implementer |
-| infra-val-a | Validator |
+| — | — |
 
 
 ---
@@ -38,7 +37,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-GITHUB-AGENT-PRODUCTION-02 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree | implementing | 2026-05-27 |
+| PE-OPS-GITHUB-AGENT-PRODUCTION-02 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree | merged | 2026-05-28 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | merged | 2026-05-27 |
 | PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged on `origin/main` | 2026-05-26 |
 | PE-OPS-CURRENT-PE-STATE-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-current-pe-state-01 | merged | 2026-05-20 |
@@ -276,6 +275,7 @@ PM housekeeping entries (prefix `PM-CHORE-XX`):
 | PM-CHORE-103 | Closed PE-OPS-GITHUB-AGENT-PRODUCTION-01 Phase 1 as merged (PR #459, merge SHA `9a2b31a010bdb7cfa74a51533317b7d85fb2a6a1`, infra-val-a PASS at e2020754). `bin/gh-agent` GitHub App installation-token launcher is now on `main`. Plan-complete mode restored: PE and Branch cleared; no active PE; registry row updated to merged. Phases 2 (linked worktree rebuild), 4 (sudoers rule for elis-github wrapper), and 5 (live auth validation and OpenClaw enablement) remain pending — each requires separate PO approval before execution. | 2026-05-27 |
 | PM-CHORE-104 | Opened PE-OPS-GITHUB-AGENT-PRODUCTION-02 (Rebuild GitHub Agent Worktree and Execution Boundary) with `infra-impl-b` as Implementer and `infra-val-a` as Validator per alternation rule (consecutive github domain, same pair as PRODUCTION-01 — alternation maintained within series). Scope: replace invalid standalone clone at `/opt/elis/agent-worktrees/github-agent` with a proper linked worktree from `/opt/elis/repo`; set/verify git identity `elis-git-bot <elis-git-bot@electoralintegrity.org>`, ownership `elis-github:elis-github`, and linked worktree pointer binding. No OpenClaw config, no sudoers, no live API call, no secrets access. Rebuild plan gated on separate PO approval before any worktree mutation. | 2026-05-27 |
 | PM-CHORE-105 | Scope correction for PE-OPS-GITHUB-AGENT-PRODUCTION-02 by PO directive (2026-05-27). Original narrow scope (Phase 2 linked worktree rebuild only) is reset and replaced with full productionisation scope covering five internal phase gates: PHASE_2_WORKTREE_REBUILD (linked worktree rebuild + git identity/ACL verification), PHASE_3_EXECUTION_BOUNDARY (elis-github wrapper/sudoers, least-privilege), PHASE_4_OPENCLAW_ENABLEMENT (live config update via Supervisor/PO path, github-agent enabled), PHASE_5_LIVE_AUTH_VALIDATION (GitHub App installation-token auth via `bin/gh-agent`, read-only proof), PHASE_6_PRODUCTION_READINESS (end-to-end proof, PE close). Each gate requires separate explicit PO approval before execution. No worktree mutation has occurred — branch `feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree` not yet created. RESET_BINDING_ACK_V1 and PE_OPENING_V1 issued. PE state: implementing, blocked on PHASE_2_WORKTREE_REBUILD PO gate. Strict boundaries: PM must not edit OpenClaw live/runtime config; no secrets printed; no private key content in chat; no ambient rochasamurai auth; no long-lived PAT production path; no write ops without per-operation PO approval. | 2026-05-27 |
+| PM-CHORE-106 | Closed PE-OPS-GITHUB-AGENT-PRODUCTION-02 as merged. PR #460 (`test: ELIS GitHub write-path production test`) merged by `app/elis-github`, merge SHA `6b15fb0ba09e5955b0444e0a5a360aaa9a5059f9`, 2026-05-28. ELIS GitHub write-path production-ready. Plan-complete mode restored: PE and Branch cleared; no active PE; registry row updated to merged. Awaiting PM assignment of next PE. | 2026-05-28 |
 
 
 Alternation rule:
