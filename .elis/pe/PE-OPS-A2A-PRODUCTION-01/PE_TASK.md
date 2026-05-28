@@ -1,85 +1,73 @@
-# PE-OPS-A2A-PRODUCTION-01 — Implement Production A2A Agent Communication Backbone
+# PE-OPS-A2A-PRODUCTION-01 — Put A2A Internal Agent Communication into Production
 
 ## PE_ID
 PE-OPS-A2A-PRODUCTION-01
 
 ## Objective
-Implement a production-safe internal A2A communication path on elis-server so ELIS agents can exchange reset acknowledgements, dispatch requests, validation requests, blocker reports, evidence notices, and lifecycle status without relying only on Discord thread/session routing.
+Put the ELIS A2A internal agent communication layer (established by PE-OPS-A2A-RUNTIME-01) into production: make the transport persistent, production-grade, and actively used by ELIS agents for internal coordination — while keeping Discord as the exclusive PO-facing channel.
 
-## Opening packet
-- Lane: Strict
-- Baseline HEAD: `da7f9d505cfd6b3181e0720ea9a2f9678115147e`
-- Branch: `feature/pe-ops-a2a-production-01`
-- Implementer: `infra-impl-b`
-- Validator: `infra-val-a`
+## Opening packet (corrected — PM-CHORE-107 r2)
+- Lane: **Strict**
+- Baseline HEAD: `83f91cd9ca8f955cd804ec58039a3a28f1e563c6`
+- Branch: `feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production`
+- Implementer: `infra-impl-a`
+- Validator: `infra-val-b`
 - Supervisor verification role: read-only only
+- Dispatch: **HELD** — PM must issue explicit dispatch instruction
 
-## First-pass files
-- `CURRENT_PE.md`
-- `.elis/pe/PE-OPS-A2A-PRODUCTION-01/PE_TASK.md`
-- `.elis/pe/PE-OPS-A2A-PRODUCTION-01/DISPATCH_STATUS.md`
-- `.elis/pe/PE-OPS-A2A-PRODUCTION-01/dispatch-status.json`
-- `docs/governance/ELIS_A2A_Production_Backbone.md`
-- `docs/governance/ELIS_A2A_Production_Security_Model.md`
-- `docs/governance/ELIS_A2A_Production_Rollback.md`
+## First-pass scope (Strict lane — PO-approved)
+Read-only discovery and planning only. No implementation, no config edits, no live routing.
 
-## Phase 1 scope
-- Docs/spec/design only
-- Message contract and envelope
-- Agent identity and routing model
-- Delivery acknowledgement semantics
-- Failure classification taxonomy
-- Durable message log design
-- Supervisor diagnostic visibility
-- Lifecycle-status integration
-- Discord remains PO-facing only
+Allowed:
+- `HANDOFF.md` updates if needed
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-01/PE_TASK.md` updates
+- Read-only inspection of PE-OPS-A2A-RUNTIME-01 artefacts on `main`
+- Read-only inspection of current A2A runtime/config/status on elis-server
+- Implementation plan document
+- Risk and rollback plan document
+- Proposed file scope for actual implementation
 
-## Explicit exclusions
-- runtime code
-- service units
-- OpenClaw/Hermes config mutation
-- auth/secret changes
-- runtime deployment
-- service restart
-- live routing mutation
-- dispatch automation
-- production cutover
+Not allowed in first pass:
+- Runtime code changes
+- OpenClaw session mutation
+- Service restart or reload
+- A2A live routing enablement
+- Any config/auth/secret changes
 
-## Runtime / service / config boundaries
-- No runtime implementation in Phase 1.
-- No service or daemon changes in Phase 1.
-- No auth, secret, token, or environment mutation in Phase 1.
-- No transport activation or live routing in Phase 1.
+## What is already implemented (PE-OPS-A2A-RUNTIME-01, merged 2026-05-26)
+- `scripts/a2a_local_transport.py` — file-based transport at `/tmp/elis_a2a/<recipient>/`
+- `schemas/a2a_message.schema.json` — five message types (status, reset_ack, task_state, evidence_ref, failure)
+- `schemas/a2a_envelope.schema.json`
+- `tests/test_a2a_local_transport.py` — 30/30 passing
+- `docs/governance/ELIS_A2A_Runtime_Spec.md`
+- `docs/governance/ELIS_A2A_Communication_Matrix.md`
+- `docs/governance/ELIS_A2A_Production_Backbone.md` (design/spec only)
+- `docs/governance/ELIS_A2A_Production_Security_Model.md` (design/spec only)
+- `docs/governance/ELIS_A2A_Production_Rollback.md` (design/spec only)
 
-## Security model
-- Authenticated agent identities only.
-- Append-only durable audit log.
-- Least-privilege dispatch.
-- Explicit delivery ACKs.
-- Classified failures, no silent drops.
-- No arbitrary agent-to-agent injection.
+## What "production" means in this PE
+Defined in GATE_1_A2A_PRODUCTION_READINESS_PLAN — see PM report for detail.
 
-## Rollback plan
-- Keep Discord/session routing as fallback.
-- Gate the new transport behind a disable switch.
-- No destructive migration in Phase 1.
-- Revert by branch/worktree only if needed.
+## Hard stops (Strict lane)
+- No live config edits
+- No OpenClaw session mutation
+- No service restart/reload without explicit per-operation PO approval
+- No A2A live routing enablement without PO approval
+- No secrets, tokens, or credentials in messages or code
+- No dispatch automation
+
+## Rollback posture
+- Discord/session routing remains operational fallback
+- New transport gated behind explicit enable step (not automatic)
+- Rollback: abandon branch or `git revert` — no service action required in planning phase
 
 ## Evidence requirements
-- Baseline HEAD must match `origin/main`.
-- Clean worktree required before opening.
-- Pasted command output required for all state claims.
-- Routing/ACK claims require log or test evidence.
-- Validator verdict must include inline evidence before the verdict line.
-
-## Phase gates
-1. PO approves the opening packet.
-2. PM updates `CURRENT_PE.md` and creates the A2A branch from `origin/main`.
-3. Implementer drafts the A2A backbone docs/spec/design only.
-4. Validator verifies with tests and evidence.
-5. Only then consider runtime/config/service changes.
+- Baseline HEAD must match `origin/main`
+- Clean worktree required before any commit
+- All state claims require pasted command output
+- Validator verdict must include inline evidence before the verdict line
 
 ## Handoff requirements
-- Opening packet recorded in `CURRENT_PE.md`.
-- Task file created at the approved path.
-- Implementer dispatch deferred until PO approves the implementation packet.
+- Opening packet recorded in `CURRENT_PE.md`
+- Task file at approved path (this file)
+- Implementer dispatch deferred until PM issues explicit instruction
