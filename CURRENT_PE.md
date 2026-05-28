@@ -21,14 +21,15 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | — |
-| Branch  | — |
+| PE      | PE-OPS-A2A-PRODUCTION-01 |
+| Branch  | feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| — | — |
+| infra-impl-a | Implementer |
+| infra-val-b | Validator |
 
 
 ---
@@ -47,7 +48,7 @@
 | PE-GOV-RISK-TIER-01 | governance | infra-impl-a         | infra-val-b        | feature/pe-gov-risk-tier-01-add-risk-tiered-pe-protocol | blocked         | 2026-05-06   |
 | PE-OPS-FIXED-WORKSPACES-01 | fixed-workspaces | infra-impl-b | infra-val-a | feature/pe-ops-fixed-workspaces-01-adopt-fixed-agent-workspace-and-github-write-boundary-model | merged | 2026-05-07 |
 | PE-OPS-A2A-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-a2a-01-phase-1-communication-matrix-clean-opening | merged | 2026-05-17 |
-| PE-OPS-A2A-PRODUCTION-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-a2a-production-01 | planning | 2026-05-18 |
+| PE-OPS-A2A-PRODUCTION-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production | implementing | 2026-05-28 |
 | PE-OPS-GITHUB-01 | github          | infra-impl-a         | infra-val-b        | feature/pe-ops-github-01-elis-github-agent-role-and-permission-model | merged          | 2026-05-06   |
 | PE-OPS-GITHUB-02 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-02-deploy-elis-github-agent | merged | 2026-05-08 |
 | PE-OPS-GITHUB-AGENT-ENFORCEMENT-01 | github | infra-impl-a | infra-val-b | feature/pe-ops-github-agent-enforcement-01-deterministic-github-agent-source-path | planning | 2026-05-10 |
@@ -276,6 +277,7 @@ PM housekeeping entries (prefix `PM-CHORE-XX`):
 | PM-CHORE-104 | Opened PE-OPS-GITHUB-AGENT-PRODUCTION-02 (Rebuild GitHub Agent Worktree and Execution Boundary) with `infra-impl-b` as Implementer and `infra-val-a` as Validator per alternation rule (consecutive github domain, same pair as PRODUCTION-01 — alternation maintained within series). Scope: replace invalid standalone clone at `/opt/elis/agent-worktrees/github-agent` with a proper linked worktree from `/opt/elis/repo`; set/verify git identity `elis-git-bot <elis-git-bot@electoralintegrity.org>`, ownership `elis-github:elis-github`, and linked worktree pointer binding. No OpenClaw config, no sudoers, no live API call, no secrets access. Rebuild plan gated on separate PO approval before any worktree mutation. | 2026-05-27 |
 | PM-CHORE-105 | Scope correction for PE-OPS-GITHUB-AGENT-PRODUCTION-02 by PO directive (2026-05-27). Original narrow scope (Phase 2 linked worktree rebuild only) is reset and replaced with full productionisation scope covering five internal phase gates: PHASE_2_WORKTREE_REBUILD (linked worktree rebuild + git identity/ACL verification), PHASE_3_EXECUTION_BOUNDARY (elis-github wrapper/sudoers, least-privilege), PHASE_4_OPENCLAW_ENABLEMENT (live config update via Supervisor/PO path, github-agent enabled), PHASE_5_LIVE_AUTH_VALIDATION (GitHub App installation-token auth via `bin/gh-agent`, read-only proof), PHASE_6_PRODUCTION_READINESS (end-to-end proof, PE close). Each gate requires separate explicit PO approval before execution. No worktree mutation has occurred — branch `feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree` not yet created. RESET_BINDING_ACK_V1 and PE_OPENING_V1 issued. PE state: implementing, blocked on PHASE_2_WORKTREE_REBUILD PO gate. Strict boundaries: PM must not edit OpenClaw live/runtime config; no secrets printed; no private key content in chat; no ambient rochasamurai auth; no long-lived PAT production path; no write ops without per-operation PO approval. | 2026-05-27 |
 | PM-CHORE-106 | Closed PE-OPS-GITHUB-AGENT-PRODUCTION-02 as merged. PR #460 (`test: ELIS GitHub write-path production test`) merged by `app/elis-github`, merge SHA `6b15fb0ba09e5955b0444e0a5a360aaa9a5059f9`, 2026-05-28. ELIS GitHub write-path production-ready. Plan-complete mode restored: PE and Branch cleared; no active PE; registry row updated to merged. Awaiting PM assignment of next PE. | 2026-05-28 |
+| PM-CHORE-107 | Opened PE-OPS-A2A-PRODUCTION-01 (Put A2A Internal Agent Communication into Production) with `infra-impl-a` as Implementer and `infra-val-b` as Validator per alternation rule (last merged ops PE is PE-OPS-PO-ADVISOR-01 with infra-impl-b in table order; CI-enforced). Note: PE-OPS-A2A-RUNTIME-01 has stale status "merged on `origin/main`" — excluded from alternation check; should be corrected to "merged" in a follow-up housekeeping commit. Objective: promote A2A internal agent communication to production. Branch: `feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production`. Implementer must not be dispatched until PM issues explicit dispatch. | 2026-05-28 |
 
 
 Alternation rule:

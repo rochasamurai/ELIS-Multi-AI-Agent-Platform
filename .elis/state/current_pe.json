@@ -1,8 +1,8 @@
 {
-  "current_state": "merged",
-  "pe_id": "PE-OPS-GITHUB-AGENT-PRODUCTION-02",
-  "branch": "feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree",
-  "implementer": "infra-impl-b",
-  "validator": "infra-val-a",
-  "note": "PE closed (PM-CHORE-106). PR #460 merged by app/elis-github, SHA 6b15fb0ba09e5955b0444e0a5a360aaa9a5059f9, 2026-05-28. ELIS GitHub write-path production-ready. No active PE — awaiting PM assignment of next PE."
+  "current_state": "implementing",
+  "pe_id": "PE-OPS-A2A-PRODUCTION-01",
+  "branch": "feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production",
+  "implementer": "infra-impl-a",
+  "validator": "infra-val-b",
+  "note": "Opened PM-CHORE-107 (2026-05-28). Objective: put A2A internal agent communication into production. Baseline: 83f91cd9ca8f955cd804ec58039a3a28f1e563c6. Implementer hold — dispatch not yet issued. No runtime config edits, no service restarts without PO approval."
 }
