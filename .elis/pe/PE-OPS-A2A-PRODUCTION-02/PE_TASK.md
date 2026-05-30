@@ -165,3 +165,28 @@ without review.
 Config source for `openclaw_config_agent_match`:
   `/home/samurai/.openclaw/openclaw.json` (live)
   NOT `/opt/elis/repo/openclaw/openclaw.json` (stale)
+
+---
+
+## Gate 2A-model-fix scope (approved addition)
+
+Approved by PO after MODEL_PROVIDER_PROVENANCE_EXCEPTION_ACCEPTED_BY_PO and
+MODEL_APPLY_FAILURE discovery (2026-05-30).
+
+Allowed writes (Implementer — infra-impl-a):
+- `scripts/check_agent_model_registry.py` (new)
+- `tests/test_check_agent_model_registry.py` (new)
+- `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` (append only)
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-02/HANDOFF.md` (updated)
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-02/PE_TASK.md` (this addition only)
+
+Allowed reads: all existing repo files.
+
+Hard stops (Gate 2A-model-fix):
+- Do not edit models.json
+- Do not edit OpenClaw/Hermes config
+- Do not restart services
+- Do not dispatch validation
+- Do not create .enabled
+- Do not modify Gate 2A A2A runtime code (scripts/a2a_local_transport.py, tests/test_a2a_local_transport.py)
+- Do not create PR

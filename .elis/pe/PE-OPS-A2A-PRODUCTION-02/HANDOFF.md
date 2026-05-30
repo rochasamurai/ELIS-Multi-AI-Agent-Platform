@@ -176,3 +176,63 @@ All terminology in this HANDOFF and in the code changes uses ELIS-first naming c
 ## Status
 
 Gate 2A complete. Awaiting PM review and Gate 2B dispatch instruction.
+
+---
+
+## Gate 2A-model-fix
+
+### Files created/updated
+
+| File | Change |
+|------|--------|
+| `scripts/check_agent_model_registry.py` | New — ELIS Platform agent model registry checker |
+| `tests/test_check_agent_model_registry.py` | New — full test suite for registry checker |
+| `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` | Appended model binding requirement section |
+| `.elis/pe/PE-OPS-A2A-PRODUCTION-02/PE_TASK.md` | Appended Gate 2A-model-fix scope block |
+
+### Example PASS output
+
+```
+ELIS Platform Agent Model Registry Check — config: /home/samurai/.openclaw/openclaw.json
+
+  PASS  infra-impl-a: openrouter/qwen/qwen3-coder-flash
+  PASS  infra-impl-b: openrouter/deepseek/deepseek-v4-flash
+  PASS  infra-val-a: openrouter/deepseek/deepseek-v4-pro
+  PASS  infra-val-b: openrouter/z-ai/glm-5.1
+  PASS  prog-impl-a: <model>
+  PASS  prog-impl-b: <model>
+  PASS  prog-val-a: <model>
+  PASS  prog-val-b: <model>
+
+RESULT: PASS — all ELIS Platform agents have model entries in live config
+```
+
+### Example FAIL output (one agent missing)
+
+```
+ELIS Platform Agent Model Registry Check — config: /home/samurai/.openclaw/openclaw.json
+
+  PASS  infra-impl-a: openrouter/qwen/qwen3-coder-flash
+  FAIL  infra-impl-b: model entry missing from live config
+  ...
+
+RESULT: FAIL — 1 agent(s) missing model entry: infra-impl-b
+```
+
+### Model exception record
+
+Gate 2A-model-fix implementation ran as claude-cli/claude-sonnet-4-6 under PO-approved exception
+(MODEL_PROVIDER_PROVENANCE_EXCEPTION_ACCEPTED_BY_PO). Configured model for infra-impl-a is
+openrouter/qwen/qwen3-coder-flash. OpenClaw model-registry remediation (MODEL_APPLY_FAILURE)
+not yet resolved; explicit model parameter was passed but not honoured at runtime.
+
+### Script read-only confirmation
+
+`check_agent_model_registry.py` is read-only in all modes:
+- `--check` (default): reads config and reports; no writes
+- `--sync`: exits 2 immediately; no writes, no reads of live config
+- No filesystem mutation in any mode
+
+### Status
+
+Gate 2A-model-fix complete. Awaiting Validator review.

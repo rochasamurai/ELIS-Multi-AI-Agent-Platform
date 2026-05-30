@@ -305,3 +305,67 @@ Required checks for every PE dispatch:
 5. **Persistent context check** (`scripts/check_persistent_context_files.py`) — verifies runtime/bootstrap files exist in the expected location
 
 ---
+## Model Binding Requirement for ELIS Agent Dispatch
+
+**Added: PE-OPS-A2A-PRODUCTION-02**
+
+### Requirement
+
+Every `sessions_spawn.agentId` dispatch to an ELIS Platform agent MUST include an explicit
+`model` parameter matching the target agent's live `~/.openclaw/openclaw.json` model entry.
+
+`agentId` controls workspace routing and session identity only. Without an explicit `model`
+parameter, OpenClaw inherits the caller's model — violating ELIS 2-agent model resilience.
+
+### Required dispatch parameters
+
+| Parameter          | Requirement                                                    |
+|--------------------|----------------------------------------------------------------|
+| `agentId`          | Assigned agent from live config                                |
+| `model`            | Must match agent's `model` field in live `~/.openclaw/openclaw.json`; or named PO exception required |
+| `cwd`              | Agent workspace from live config                               |
+| `context`          | `"isolated"`                                                   |
+| `cleanup`          | `"keep"`                                                       |
+| `runtime`          | `"subagent"`                                                   |
+| `taskName`         | Must include PE ID and gate label                              |
+| `runTimeoutSeconds`| Bounded value (≤ 600)                                          |
+
+### Live ELIS Platform agent model registry
+
+Source: `/home/samurai/.openclaw/openclaw.json` (authoritative — re-read immediately before dispatch)
+
+| ELIS agent     | Configured model                        |
+|----------------|-----------------------------------------|
+| infra-impl-a   | openrouter/qwen/qwen3-coder-flash       |
+| infra-impl-b   | openrouter/deepseek/deepseek-v4-flash   |
+| infra-val-a    | openrouter/deepseek/deepseek-v4-pro     |
+| infra-val-b    | openrouter/z-ai/glm-5.1                 |
+| prog-impl-a    | (read from live config before dispatch) |
+| prog-impl-b    | (read from live config before dispatch) |
+| prog-val-a     | (read from live config before dispatch) |
+| prog-val-b     | (read from live config before dispatch) |
+
+Values for prog-* agents must be read from live config immediately before dispatch — they are not reproduced here to avoid drift.
+
+### Validation tool
+
+`scripts/check_agent_model_registry.py` — validates that all ELIS Platform agents in scope have
+an explicit model entry in the live OpenClaw config. Run with `--check` (default). CI-safe.
+
+```bash
+python scripts/check_agent_model_registry.py --check
+```
+
+### Exceptions
+
+Any dispatch using a model other than the agent's live config entry requires a named, PO-approved
+exception recorded in the opening Status Packet of the affected PE gate. Exception must name:
+- The actual model used
+- The configured model
+- The PO approval reference (PM-CHORE or PE ID)
+
+### ELIS 2-agent model resilience rule
+
+Implementer and Validator for any PE gate must run on different AI models. If both sessions
+inherit the same caller model, the resilience requirement is not met. The `model` parameter
+in `sessions_spawn` is the mechanism that enforces this.
