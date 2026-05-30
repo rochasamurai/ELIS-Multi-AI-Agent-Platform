@@ -236,3 +236,32 @@ not yet resolved; explicit model parameter was passed but not honoured at runtim
 ### Status
 
 Gate 2A-model-fix complete. Awaiting Validator review.
+
+---
+
+## Gate 2A-model-fix corrective pass
+
+### Change
+
+`scripts/check_agent_model_registry.py` and `tests/test_check_agent_model_registry.py` updated to implement two-layer model registry check:
+
+- Layer 1: agent present in live `/home/samurai/.openclaw/openclaw.json` with non-empty model field
+- Layer 2: same configured model appears as an `id` in the agent's per-agent `/home/samurai/.openclaw/agents/<agentId>/agent/models.json`
+
+Added `--agents-root` flag (default `/home/samurai/.openclaw/agents`) for test isolation.
+
+### Hard-fail conditions
+
+- Agent missing from openclaw.json
+- Model field missing or empty in openclaw.json
+- Per-agent models.json missing
+- Per-agent models.json invalid JSON
+- Configured model not present as an `id` in any provider list in models.json
+
+### Live check result
+
+Running against actual live config produces FAIL for all 8 scoped agents (per-agent models.json does not contain the configured OpenRouter models). This is the correct behaviour — the script now surfaces the MODEL_APPLY_FAILURE root cause that the previous implementation missed.
+
+### Read-only confirmation
+
+The script performs no writes in any mode. `--sync` exits 2 immediately without reading or modifying any file.

@@ -190,3 +190,21 @@ Hard stops (Gate 2A-model-fix):
 - Do not create .enabled
 - Do not modify Gate 2A A2A runtime code (scripts/a2a_local_transport.py, tests/test_a2a_local_transport.py)
 - Do not create PR
+
+---
+
+## Gate 2A-model-fix corrective pass scope (approved addition)
+
+Approved after MODEL_REGISTRY_CHECK_IMPLEMENTATION_INCOMPLETE finding (2026-05-30).
+
+Corrective changes:
+- `scripts/check_agent_model_registry.py`: add Layer 2 per-agent models.json check, `--agents-root` flag
+- `tests/test_check_agent_model_registry.py`: full rewrite covering two-layer checks
+
+Hard stops (corrective pass):
+- Do not edit any models.json file
+- Do not edit OpenClaw/Hermes config
+- Do not restart services
+- Do not dispatch validation
+- Do not create .enabled
+- Do not create PR
