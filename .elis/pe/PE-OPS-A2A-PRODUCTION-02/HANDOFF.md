@@ -32,7 +32,7 @@ actual_worktree:             /opt/elis/agent-worktrees/infra-impl-a
 branch:                      feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls
 head:                        2217d4e784c34ee302624a1e1707ed490a222f09
 git_identity:                infra-impl-a / infra-impl-a@openclaw.local
-model_provider_profile:      claude-cli/claude-sonnet-4-6
+model_provider_profile:      openrouter/qwen/qwen3-coder-flash  [corrected: Gate 2A session ran as claude-cli/claude-sonnet-4-6; live config binding is openrouter/qwen/qwen3-coder-flash; discrepancy noted per OBS-02]
 dispatch_method:             sessions_spawn.agentId
 openclaw_config_agent_match: PASS
 acp_command_not_used:        PASS

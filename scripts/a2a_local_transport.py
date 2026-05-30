@@ -14,7 +14,7 @@ GOVERNANCE BOUNDARY (non-negotiable):
   - Messages exchanged here are internal coordination signals only.
 
 Transport mechanics:
-  - Mailbox root: /tmp/elis_a2a/
+  - Mailbox root: /opt/elis/a2a/mailboxes/
   - Each message is written as a single JSON file: <mailbox_root>/<recipient>/<message_id>.json
   - No sockets, no HTTP, no network calls of any kind.
   - Schema validation uses jsonschema when available; falls back to required-field check.
