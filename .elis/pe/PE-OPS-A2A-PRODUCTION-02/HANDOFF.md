@@ -1,8 +1,8 @@
-# HANDOFF — PE-OPS-A2A-PRODUCTION-02 — Gate 1
+# HANDOFF — PE-OPS-A2A-PRODUCTION-02 — Gate 2A
 
 > Canonical path: `.elis/pe/PE-OPS-A2A-PRODUCTION-02/HANDOFF.md`
 > Implementer: `infra-impl-a`
-> Gate: 1 — Read-only discovery and planning pass
+> Gate: 2A — Code + test + ELIS runtime workspace directory creation
 > Date: 2026-05-30
 
 ---
@@ -16,144 +16,163 @@
 | Branch | feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls |
 | Implementer surface | infra-impl-a |
 | Validator surface | infra-val-b |
-| Gate | 1 — planning pass only |
+| Gate | 2A — code + test + ELIS runtime workspace directory creation |
 
 ---
 
-## Gate 1 summary
-
-Gate 1 is a read-only discovery and planning pass. No runtime code, no config edits,
-no service restarts, no live routing, no `/opt/elis/a2a/` directory creation. The
-deliverables are three planning documents committed on the PE branch.
-
-### What was done in Gate 1
-
-1. Read and verified all authorised artefacts on `origin/main`:
-   - `scripts/a2a_local_transport.py`
-   - `tests/test_a2a_local_transport.py`
-   - `schemas/a2a_envelope.schema.json`
-   - `schemas/a2a_message.schema.json`
-   - `docs/governance/ELIS_A2A_Runtime_Spec.md`
-   - `docs/governance/ELIS_A2A_Communication_Matrix.md`
-   - `docs/governance/ELIS_A2A_Production_Backbone.md`
-   - `docs/governance/ELIS_A2A_Production_Security_Model.md`
-   - `docs/governance/ELIS_A2A_Production_Rollback.md`
-   - `docs/openclaw/ELIS_A2A_GATEWAY_SPEC.md`
-   - `.elis/pe/PE-OPS-A2A-PRODUCTION-01/` (read-only prior context)
-
-2. Ran `python3 scripts/check_current_pe.py` — PASS.
-
-3. Ran scope gate `git diff --name-status origin/main..HEAD` — only PM-authored
-   files present; no scope contamination.
-
-4. Produced three planning documents:
-   - `A2A_Production_Plan.md` — current-state assessment, production gap analysis,
-     phased implementation plan, proposed file scope, acceptance criteria
-   - `A2A_Production_Risk_Rollback.md` — risk register, mitigations, rollback procedures
-
-### What was NOT done in Gate 1
-
-- No runtime code written or modified
-- No tests added or changed
-- No schemas modified
-- No OpenClaw/Hermes config touched
-- No service started, stopped, or restarted
-- No `/opt/elis/a2a/` directory created
-- No A2A routing enabled
-- No PR created (PM pushes)
-
----
-
-## What Gate 2 must address
-
-Gate 2 is the actual implementation pass. Each sub-item below requires explicit PM/PO
-approval before execution. None of these actions may begin until PM issues a Gate 2
-dispatch instruction.
-
-### Gate 2 scope (proposed — PM/PO must confirm before execution)
-
-1. **Durable runtime directory** — Create `/opt/elis/a2a/` with appropriate ownership
-   and permissions. Requires explicit PO gate approval.
-
-2. **Node.js gateway implementation** — Implement `a2a-gateway.js` per
-   `docs/openclaw/ELIS_A2A_GATEWAY_SPEC.md`:
-   - `127.0.0.1:24001` binding (loopback only)
-   - HTTP health check, send, and polling endpoints
-   - WebSocket push endpoint
-   - Envelope validation against `schemas/a2a_envelope.schema.json`
-   - Pair validation (three allowed Phase-1 pairs)
-   - Prohibited content scanning
-   - Per-agent message queues with TTL enforcement
-   - Structured logging (stdout + optional `~/.elis/a2a/gateway.log`)
-
-3. **Startup wrapper and package manifest** — `a2a-gateway.sh` and `package.json`
-   with `ws` dependency.
-
-4. **Transport persistence** — Route internal agents off `/tmp/elis_a2a/` (ephemeral)
-   to the HTTP gateway when it is running, falling back to file transport if gateway is
-   not available. Decision on persistence strategy requires PM/PO approval.
-
-5. **Durable message log** — Append-only log of all dispatched and acknowledged
-   messages per the security model in `ELIS_A2A_Production_Security_Model.md`.
-
-6. **Integration tests** — Pytest or Node.js tests covering round-trip messaging via
-   the HTTP gateway, pair rejection, prohibited content rejection, TTL expiry, and
-   health endpoint.
-
-7. **OpenClaw config update** — Enable A2A routing in live config. Requires explicit
-   PO gate approval and Supervisor verification. Must be done via live
-   `~/.openclaw/openclaw.json` (NOT stale `/opt/elis/repo/openclaw/openclaw.json`).
-
-8. **DISPATCH_PROVENANCE_PROOF_V1 integration** — Confirm that dispatch provenance
-   proof schema is recorded for every A2A-dispatched agent result, and that the proof
-   fields (worktree, agentId, session, model, cwd) are emitted and verifiable.
-
-### Files proposed for Gate 2 (subject to PM/PO approval)
-
-| File | Action |
-|------|--------|
-| `/opt/elis/a2a/a2a-gateway.js` | Create — Node.js HTTP/WebSocket gateway |
-| `/opt/elis/a2a/a2a-gateway.sh` | Create — startup wrapper |
-| `/opt/elis/a2a/package.json` | Create — Node.js manifest |
-| `tests/test_a2a_gateway.py` or `tests/test_a2a_gateway.js` | Create — integration tests |
-| `docs/governance/ELIS_A2A_Production_Activation.md` | Create — production activation runbook |
-
-No files in `scripts/`, `schemas/`, or existing `docs/governance/` files will be
-modified unless PM/PO explicitly authorises the change.
-
----
-
-## Hard stops — confirmed not triggered in Gate 1
-
-- No changes to `scripts/`, `elis/`, `tests/`, or `schemas/`
-- No changes to `docs/governance/` or any file outside the three Gate 1 deliverables
-- No OpenClaw/Hermes config edits
-- No service restart or reload
-- No `/opt/elis/a2a/` directory created
-- No A2A live routing enabled
-- No PR created
-- No content from PE-OPS-A2A-PRODUCTION-01 branches (contaminated commits excluded)
-
----
-
-## Evidence
+## DISPATCH_PROVENANCE_PROOF_V1
 
 ```
-check_current_pe.py:
-CURRENT_PE.md OK — release context, roles, registry, and alternation valid.
-
-Scope gate (git diff --name-status origin/main..HEAD):
-A       .elis/pe/PE-OPS-A2A-PRODUCTION-02/PE_TASK.md
-A       .elis/pe/PE-OPS-A2A-PRODUCTION-02/TEMPORARY_DELEGATE_TASK_EXCEPTION.md
-M       .elis/state/current_pe.json
-M       CURRENT_PE.md
+DISPATCH_PROVENANCE_PROOF_V1
+requested_agent_id:          infra-impl-a
+actual_agent_id:             infra-impl-a
+actual_session_id:           agent:infra-impl-a:subagent:4a473611-4c54-4005-afd2-bacceafed75b
+actual_cwd:                  /opt/elis/agent-worktrees/infra-impl-a
+actual_worktree:             /opt/elis/agent-worktrees/infra-impl-a
+branch:                      feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls
+head:                        2217d4e784c34ee302624a1e1707ed490a222f09
+git_identity:                infra-impl-a / infra-impl-a@openclaw.local
+model_provider_profile:      claude-cli/claude-sonnet-4-6
+dispatch_method:             sessions_spawn.agentId
+openclaw_config_agent_match: PASS
+acp_command_not_used:        PASS
+pm_worktree_not_used:        PASS
+dispatch_timestamp:          2026-05-30T19:27:00+01:00
 ```
 
-(Scope gate run before the Gate 1 commit; Gate 1 deliverables will appear after commit.)
+---
+
+## Gate 2A Summary
+
+Gate 2A implements the production mailbox structure, enabled-sentinel disabled-by-default
+guard, and Phase 1 ELIS agent identity smoke round-trips. No OpenClaw/Hermes config was
+changed, no service was restarted, and `/opt/elis/a2a/.enabled` was not created — the A2A
+transport remains disabled by default until explicit PO enablement.
+
+---
+
+## Files Changed
+
+### `scripts/a2a_local_transport.py`
+
+| Change | Description |
+|--------|-------------|
+| Constants block | Replaced `_MAILBOX_ROOT = Path("/tmp/elis_a2a")` with three constants: `_A2A_RUNTIME_ROOT = Path("/opt/elis/a2a")`, `_MAILBOX_ROOT = _A2A_RUNTIME_ROOT / "mailboxes"`, `_ENABLED_SENTINEL = _A2A_RUNTIME_ROOT / ".enabled"` |
+| New exception class | Added `A2ATransportDisabledError(RuntimeError)` immediately after constants block, before `_VALID_MESSAGE_TYPES` |
+| `__init__` | Added `skip_enabled_check: bool = False` keyword-only parameter; raises `A2ATransportDisabledError` when sentinel absent and check not skipped |
+| `_mailbox()` | Now creates `inbox/`, `processed/`, and `dead/` subdirectories under `<root>/<recipient>/` and returns `inbox` path |
+| `receive()` | Reads from `inbox/`; moves successfully parsed files to `processed/`; moves corrupt files to `dead/` |
+| `list_messages()` | Reads from `inbox/` non-destructively |
+
+### `tests/test_a2a_local_transport.py`
+
+| Change | Description |
+|--------|-------------|
+| `transport` fixture | Added `skip_enabled_check=True` to bypass sentinel in all existing tests |
+| `TestGovernanceBoundary` | All 7 methods updated to accept `tmp_path` and use `skip_enabled_check=True` (required because default constructor checks sentinel) |
+| `TestGate2AEnabledSentinel` (new) | 3 tests: raises when sentinel absent, succeeds when sentinel present, `skip_enabled_check` bypass |
+| `TestGate2AMailboxStructure` (new) | 5 tests: send writes to inbox, receive moves to processed, corrupt moves to dead, list reads inbox only, no crash on empty receive |
+| `TestGate2APhase1AgentIds` (new) | Parametrised over 5 Phase 1 agent IDs (pm, infra-impl-a, infra-impl-b, infra-val-a, infra-val-b): send/receive round-trip for each |
+
+---
+
+## ELIS Runtime Workspace Directories Created
+
+```
+$ ls -la /opt/elis/a2a/
+total 16
+drwxr-x---  4 samurai samurai 4096 May 30 19:29 .
+drwxr-xr-x 13 samurai samurai 4096 May 30 19:29 ..
+drwxr-x---  2 samurai samurai 4096 May 30 19:29 logs
+drwxr-x---  7 samurai samurai 4096 May 30 19:29 mailboxes
+
+$ ls -la /opt/elis/a2a/mailboxes/
+total 28
+drwxr-x--- 7 samurai samurai 4096 May 30 19:29 .
+drwxr-x--- 4 samurai samurai 4096 May 30 19:29 ..
+drwxr-x--- 5 samurai samurai 4096 May 30 19:29 infra-impl-a
+drwxr-x--- 5 samurai samurai 4096 May 30 19:29 infra-impl-b
+drwxr-x--- 5 samurai samurai 4096 May 30 19:29 infra-val-a
+drwxr-x--- 5 samurai samurai 4096 May 30 19:29 infra-val-b
+drwxr-x--- 5 samurai samurai 4096 May 30 19:29 pm
+
+=== pm ===           dead  inbox  processed
+=== infra-impl-a === dead  inbox  processed
+=== infra-impl-b === dead  inbox  processed
+=== infra-val-a ===  dead  inbox  processed
+=== infra-val-b ===  dead  inbox  processed
+```
+
+Permissions: owner `samurai:samurai`, mode `750`. `/opt/elis/a2a/.enabled` was NOT created.
+
+---
+
+## Test Results
+
+```
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0
+rootdir: /opt/elis/agent-worktrees/infra-impl-a
+configfile: pyproject.toml
+collected 43 items
+
+tests/test_a2a_local_transport.py ...................................... [100%]
+
+============================== 43 passed in 0.17s ==============================
+```
+
+**43 passed, 0 failed.**
+
+---
+
+## Sentinel Absent Verification
+
+```
+PASS: A2ATransportDisabledError raised: ELIS A2A transport is disabled.
+      Enable marker not found: /opt/elis/a2a/.enabled
+```
+
+The default `A2ATransport()` constructor raises `A2ATransportDisabledError` when
+`/opt/elis/a2a/.enabled` is absent. CONFIRMED.
+
+---
+
+## Scope Gate
+
+```
+$ git diff --name-status HEAD
+M       scripts/a2a_local_transport.py
+M       tests/test_a2a_local_transport.py
+```
+
+Only the two approved implementation files plus this HANDOFF are in scope. No unrelated
+files touched.
+
+---
+
+## Hard Stop Confirmations
+
+| Requirement | Status |
+|-------------|--------|
+| `/opt/elis/a2a/.enabled` NOT created | CONFIRMED |
+| No OpenClaw/Hermes config changed | CONFIRMED |
+| No service restart or reload | CONFIRMED |
+| No A2A routing enabled | CONFIRMED |
+| No PR created | CONFIRMED |
+| No push | CONFIRMED |
+| No files outside approved list touched | CONFIRMED |
+| No cherry-pick from PE-OPS-A2A-PRODUCTION-01 branches | CONFIRMED |
+
+---
+
+## ELIS-First Naming Confirmation
+
+All terminology in this HANDOFF and in the code changes uses ELIS-first naming conventions.
+"OpenClaw" appears only as a concrete implementation identifier (referencing the
+`~/.openclaw/openclaw.json` config file path). No model-coupled agent IDs were used.
 
 ---
 
 ## Status
 
-Gate 1 complete. Awaiting PM review, scope gate confirmation post-commit, and Gate 2
-dispatch instruction from PM before any further work begins.
+Gate 2A complete. Awaiting PM review and Gate 2B dispatch instruction.

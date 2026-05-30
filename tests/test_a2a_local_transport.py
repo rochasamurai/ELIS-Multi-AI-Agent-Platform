@@ -34,8 +34,8 @@ _HAS_JSONSCHEMA = importlib.util.find_spec("jsonschema") is not None
 
 @pytest.fixture()
 def transport(tmp_path):
-    """Return an A2ATransport backed by a temporary directory."""
-    return A2ATransport(mailbox_root=tmp_path)
+    """Return an A2ATransport backed by a temporary directory (sentinel check bypassed)."""
+    return A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
 
 
 def _now_iso() -> str:
@@ -321,32 +321,32 @@ class TestMessageTypes:
 
 
 class TestGovernanceBoundary:
-    def test_transport_has_no_governance_authority(self):
-        t = A2ATransport()
+    def test_transport_has_no_governance_authority(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert t.has_governance_authority is False
 
-    def test_transport_has_no_merge_authority(self):
-        t = A2ATransport()
+    def test_transport_has_no_merge_authority(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert t.has_merge_authority is False
 
-    def test_transport_cannot_bypass_po_approval(self):
-        t = A2ATransport()
+    def test_transport_cannot_bypass_po_approval(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert t.can_bypass_po_approval is False
 
-    def test_transport_cannot_bypass_gate_checks(self):
-        t = A2ATransport()
+    def test_transport_cannot_bypass_gate_checks(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert t.can_bypass_gate_checks is False
 
-    def test_transport_has_no_approve_method(self):
-        t = A2ATransport()
+    def test_transport_has_no_approve_method(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert not hasattr(t, "approve")
 
-    def test_transport_has_no_merge_method(self):
-        t = A2ATransport()
+    def test_transport_has_no_merge_method(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert not hasattr(t, "merge")
 
-    def test_transport_has_no_grant_authority_method(self):
-        t = A2ATransport()
+    def test_transport_has_no_grant_authority_method(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
         assert not hasattr(t, "grant_authority")
 
 
@@ -380,3 +380,109 @@ class TestListMessages:
         listed = transport.list_messages("supervisor")
         received = transport.receive("supervisor")
         assert listed[0].message_id == received[0].message_id
+
+
+# ---------------------------------------------------------------------------
+# Gate 2A: enabled sentinel check
+# ---------------------------------------------------------------------------
+
+
+class TestGate2AEnabledSentinel:
+    def test_transport_raises_when_sentinel_absent(self, tmp_path):
+        from a2a_local_transport import A2ATransportDisabledError
+        with pytest.raises(A2ATransportDisabledError, match="disabled"):
+            A2ATransport(mailbox_root=tmp_path)
+
+    def test_transport_succeeds_when_sentinel_present(self, tmp_path):
+        import a2a_local_transport as mod
+        original = mod._ENABLED_SENTINEL
+        sentinel = tmp_path / ".enabled"
+        mod._ENABLED_SENTINEL = sentinel
+        try:
+            sentinel.touch()
+            t = A2ATransport(mailbox_root=tmp_path)
+            assert t is not None
+        finally:
+            mod._ENABLED_SENTINEL = original
+            sentinel.unlink(missing_ok=True)
+
+    def test_skip_enabled_check_bypasses_sentinel(self, tmp_path):
+        t = A2ATransport(mailbox_root=tmp_path, skip_enabled_check=True)
+        assert t is not None
+
+
+# ---------------------------------------------------------------------------
+# Gate 2A: inbox/processed/dead mailbox structure
+# ---------------------------------------------------------------------------
+
+
+class TestGate2AMailboxStructure:
+    def test_send_writes_to_inbox(self, transport, tmp_path):
+        msg = A2AMessage(
+            sender="pm", recipient="infra-impl-a", message_type="status", payload={}
+        )
+        transport.send(msg)
+        inbox = tmp_path / "infra-impl-a" / "inbox"
+        assert inbox.is_dir()
+        files = list(inbox.glob("*.json"))
+        assert len(files) == 1
+
+    def test_receive_moves_to_processed(self, transport, tmp_path):
+        msg = A2AMessage(
+            sender="pm", recipient="infra-val-b", message_type="status", payload={}
+        )
+        transport.send(msg)
+        transport.receive("infra-val-b")
+        inbox = tmp_path / "infra-val-b" / "inbox"
+        processed = tmp_path / "infra-val-b" / "processed"
+        assert len(list(inbox.glob("*.json"))) == 0
+        assert len(list(processed.glob("*.json"))) == 1
+
+    def test_corrupt_file_moves_to_dead(self, transport, tmp_path):
+        inbox = tmp_path / "infra-impl-b" / "inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        corrupt = inbox / "corrupt.json"
+        corrupt.write_text("{not valid json", encoding="utf-8")
+        transport.receive("infra-impl-b")
+        dead = tmp_path / "infra-impl-b" / "dead"
+        assert (dead / "corrupt.json").exists()
+        assert not corrupt.exists()
+
+    def test_list_messages_reads_inbox_only(self, transport, tmp_path):
+        msg = A2AMessage(
+            sender="pm", recipient="infra-val-a", message_type="status", payload={}
+        )
+        transport.send(msg)
+        listed = transport.list_messages("infra-val-a")
+        assert len(listed) == 1
+        inbox = tmp_path / "infra-val-a" / "inbox"
+        assert len(list(inbox.glob("*.json"))) == 1
+
+    def test_dead_dir_created_on_first_receive(self, transport, tmp_path):
+        # No crash on empty mailbox receive
+        result = transport.receive("infra-impl-a")
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Gate 2A: Phase 1 ELIS agent identity smoke round-trips
+# ---------------------------------------------------------------------------
+
+PHASE_1_AGENTS = ["pm", "infra-impl-a", "infra-impl-b", "infra-val-a", "infra-val-b"]
+
+
+class TestGate2APhase1AgentIds:
+    @pytest.mark.parametrize("recipient", PHASE_1_AGENTS)
+    def test_send_receive_for_phase1_agent(self, transport, recipient):
+        msg = A2AMessage(
+            sender="pm",
+            recipient=recipient,
+            message_type="status",
+            payload={"gate": "2a"},
+            pe_id="PE-OPS-A2A-PRODUCTION-02",
+        )
+        transport.send(msg)
+        received = transport.receive(recipient)
+        assert len(received) == 1
+        assert received[0].recipient == recipient
+        assert received[0].pe_id == "PE-OPS-A2A-PRODUCTION-02"
