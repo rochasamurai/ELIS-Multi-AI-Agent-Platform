@@ -44,14 +44,22 @@ prior work only.
 See `TEMPORARY_DELEGATE_TASK_EXCEPTION.md` in this directory.
 
 Forbidden dispatch methods (hard block):
+- `sessions_spawn` without `agentId`
+- `sessions_spawn` with `runtime="acp"`
+- `sessions_spawn` with `acp_command`
+- `sessions_send` for dispatch
+- `delegate_task` for dispatch
+- `delegate_task.acp_command`
 - `acp_command` (any form)
-- `sessions_spawn` (raw or PM-subagent path)
 - `raw_acp`
 - `manual_pm_execution` (PM operating in agent role)
 - PM worktree execution (running from /opt/elis/agent-worktrees/pm)
 
 Permitted dispatch method:
-- Configured agentId dispatch via OpenClaw
+- `sessions_spawn.agentId` — `sessions_spawn` with explicit `agentId`,
+  `context="isolated"`, `cleanup="keep"`, `runtime="subagent"`,
+  `cwd` = agent workspace from live `~/.openclaw/openclaw.json`,
+  `taskName` includes PE ID and gate label
 
 ---
 
