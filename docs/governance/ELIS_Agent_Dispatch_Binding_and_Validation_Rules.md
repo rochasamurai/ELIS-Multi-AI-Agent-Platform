@@ -382,3 +382,55 @@ OpenClaw model execution requires consistency across three layers:
 
 All three layers must pass for an agent to be considered model-registry compliant.
 `scripts/check_agent_model_registry.py --check` validates all three layers.
+
+## Dispatch Reset Gate (mandatory for every agent activation)
+
+**Classification of violation:** PM_DISPATCH_MISSING_TARGET_AGENT_RESET
+
+Every implementer dispatch, validator dispatch, re-dispatch, remediation pass, validation retry,
+and direct OpenClaw agent invocation MUST begin with a target-agent reset and an explicit
+reset/binding acknowledgement before any PE work or validation prompt is issued.
+
+Failure to obtain a reset acknowledgement before dispatch is a workflow violation regardless of
+whether subsequent outputs appear correct.
+
+### Mandatory reset/binding acknowledgement fields
+
+The target agent must confirm all of the following before work begins:
+
+| Field | Description |
+|---|---|
+| agent_id | Canonical agent ID (e.g. `infra-val-b`) |
+| pe_id | PE being worked (e.g. `PE-OPS-A2A-PRODUCTION-02`) |
+| role_task | Role and task description (e.g. `infra-val / sync-mode validation`) |
+| session_key | Active session key or session ID |
+| worktree | Absolute path of fixed worktree (must match agent's assigned worktree) |
+| git_root | Output of `git rev-parse --show-toplevel` |
+| branch | Output of `git branch --show-current` |
+| head | Output of `git rev-parse HEAD` (short SHA) |
+| git_status | Output of `git status -sb` (must be clean before starting) |
+| git_identity | `git config user.name` / `git config user.email` |
+| runtime_model | Actual provider/model from `executionTrace.winnerProvider` / `agentMeta.model` where available |
+| prior_context_discarded | Confirmation that stale accumulated session context is not present |
+| authorised_write_scope | Explicit list of files/paths the agent is permitted to write |
+| timestamp | UTC timestamp of acknowledgement |
+
+### Direct OpenClaw agent validation — session context rule
+
+When PM invokes `openclaw agent --agent <id> --local` for GLM-native or direct validation:
+
+- PM must use a **fresh or reset session** for the target agent.
+- Reusing `agent:<id>:main` with stale accumulated context from prior PE work is prohibited.
+- A session with >50k input tokens of prior context must be treated as stale and reset before
+  issuing new validation work.
+- The `--local` path with embedded runner is the approved fallback when gateway protocol mismatch
+  prevents standard `openclaw agent` routing. This must be noted in the Status Packet.
+
+### Enforcement
+
+- No PE gate (implementation, validation, remediation) may be recorded as started until the
+  reset/binding acknowledgement is pasted into the Status Packet.
+- PM must verify the acknowledgement fields match the expected PE branch, HEAD, and worktree
+  before accepting any work output from that session.
+- Token budget awareness: if a prior validation call consumed >50k input tokens, PM must
+  assume session context is overloaded and request a reset before the next call.

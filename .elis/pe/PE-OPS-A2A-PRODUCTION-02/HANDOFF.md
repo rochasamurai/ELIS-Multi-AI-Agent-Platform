@@ -401,3 +401,15 @@ New functions: `load_global_model_allowlist()`, `check_model_in_global_allowlist
 ### Read-only confirmation
 
 Script remains fully read-only in all modes. No json.dump, no mkdir, no unlink, no writes of any kind.
+
+### Dispatch Reset Gate (PM-CHORE correction — 2026-05-31)
+
+**Classification:** PM_DISPATCH_MISSING_TARGET_AGENT_RESET
+
+All future dispatches, re-dispatches, validation passes, and direct OpenClaw agent invocations
+require a target-agent reset and explicit reset/binding acknowledgement before work begins.
+Acknowledgement fields and direct-agent session context rules documented in:
+`docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` § Dispatch Reset Gate.
+
+For direct OpenClaw embedded-runner validation (`openclaw agent --local`): stale sessions
+with >50k prior input tokens must be reset before new validation work is issued.

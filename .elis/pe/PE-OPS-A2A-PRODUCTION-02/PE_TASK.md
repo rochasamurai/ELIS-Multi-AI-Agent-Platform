@@ -262,3 +262,12 @@ Backup: `models.json.bak.20260531T200437Z`.
 - Do not create PR
 - Do not push
 - Only infra-val-b modified by --sync-agent-catalogue
+
+### Dispatch Reset Gate rule added (2026-05-31)
+
+Added mandatory dispatch reset/binding acknowledgement rule to
+`docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md`.
+Classification: PM_DISPATCH_MISSING_TARGET_AGENT_RESET /
+VALIDATOR_TOKEN_OVERLOAD_AND_NO_OUTPUT_STALL.
+All future dispatches require reset acknowledgement before work; direct agent validation
+must use a fresh/reset session to avoid stale context overload.
