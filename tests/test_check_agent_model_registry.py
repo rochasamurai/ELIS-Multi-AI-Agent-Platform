@@ -3,6 +3,7 @@ Tests for scripts/check_agent_model_registry.py — PE-OPS-A2A-PRODUCTION-02
 
 All tests use tmp_path fixtures. No live config is accessed.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,7 +50,9 @@ def _agent_entry(agent_id: str, model: str | None = None) -> dict:
     return entry
 
 
-def _write_agent_models_json(agents_root: Path, agent_id: str, model_ids: list[str]) -> Path:
+def _write_agent_models_json(
+    agents_root: Path, agent_id: str, model_ids: list[str]
+) -> Path:
     """Write a per-agent models.json with the given model ids under a fake provider."""
     agent_dir = agents_root / agent_id / "agent"
     agent_dir.mkdir(parents=True, exist_ok=True)
@@ -90,10 +93,13 @@ def _all_test_global_models() -> dict:
 
 class TestLoadAgentModels:
     def test_returns_dict_of_id_to_model(self, tmp_path):
-        cfg = _write_openclaw_config(tmp_path, [
-            _agent_entry("infra-impl-a", "openrouter/qwen/qwen3-coder-flash"),
-            _agent_entry("infra-val-b", "openrouter/z-ai/glm-5.1"),
-        ])
+        cfg = _write_openclaw_config(
+            tmp_path,
+            [
+                _agent_entry("infra-impl-a", "openrouter/qwen/qwen3-coder-flash"),
+                _agent_entry("infra-val-b", "openrouter/z-ai/glm-5.1"),
+            ],
+        )
         result = load_agent_models(cfg)
         assert result["infra-impl-a"] == "openrouter/qwen/qwen3-coder-flash"
         assert result["infra-val-b"] == "openrouter/z-ai/glm-5.1"
@@ -125,11 +131,18 @@ class TestLoadGlobalModelAllowlist:
             },
         )
         result = load_global_model_allowlist(cfg)
-        assert result == {"openrouter/qwen/qwen3-coder-flash", "openrouter/z-ai/glm-5.1"}
+        assert result == {
+            "openrouter/qwen/qwen3-coder-flash",
+            "openrouter/z-ai/glm-5.1",
+        }
 
     def test_raises_when_key_missing(self, tmp_path):
-        cfg = _write_openclaw_config(tmp_path, [_agent_entry("infra-impl-a", "openrouter/x/y")])
-        with pytest.raises(KeyError, match="agents.defaults.models missing from config"):
+        cfg = _write_openclaw_config(
+            tmp_path, [_agent_entry("infra-impl-a", "openrouter/x/y")]
+        )
+        with pytest.raises(
+            KeyError, match="agents.defaults.models missing from config"
+        ):
             load_global_model_allowlist(cfg)
 
     def test_raises_when_not_dict(self, tmp_path):
@@ -259,7 +272,10 @@ class TestRunCheckPass:
         cfg_dir.mkdir()
         cfg = _write_openclaw_config(
             cfg_dir,
-            [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            [
+                _agent_entry(a, f"openrouter/test/{a}-model")
+                for a in ELIS_PLATFORM_AGENTS
+            ],
             global_models=_all_test_global_models(),
         )
         _all_agents_models_json(agents_dir)
@@ -269,10 +285,14 @@ class TestRunCheckPass:
         cfg_dir = tmp_path / "cfg"
         agents_dir = tmp_path / "agents"
         cfg_dir.mkdir()
-        entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+        entries = [
+            _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+        ]
         entries.append(_agent_entry("github-agent", "openai-codex/gpt-5.4-mini"))
         entries.append(_agent_entry("pm", "claude-cli/claude-sonnet-4-6"))
-        cfg = _write_openclaw_config(cfg_dir, entries, global_models=_all_test_global_models())
+        cfg = _write_openclaw_config(
+            cfg_dir, entries, global_models=_all_test_global_models()
+        )
         _all_agents_models_json(agents_dir)
         assert run_check(cfg, agents_dir, c8=False) == 0
 
@@ -305,10 +325,11 @@ class TestRunCheckLayer1Fail:
         cfg_dir = tmp_path / "cfg"
         agents_dir = tmp_path / "agents"
         cfg_dir.mkdir()
-        entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
         entries = [
-            e if e["id"] != "infra-impl-b" else {"id": "infra-impl-b"}
-            for e in entries
+            _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+        ]
+        entries = [
+            e if e["id"] != "infra-impl-b" else {"id": "infra-impl-b"} for e in entries
         ]
         present_models = {
             f"openrouter/test/{a}-model": {}
@@ -325,7 +346,9 @@ class TestRunCheckLayer1Fail:
         assert run_check(bad, tmp_path / "agents", c8=False) == 1
 
     def test_missing_openclaw_config_exits_1(self, tmp_path):
-        assert run_check(tmp_path / "nonexistent.json", tmp_path / "agents", c8=False) == 1
+        assert (
+            run_check(tmp_path / "nonexistent.json", tmp_path / "agents", c8=False) == 1
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +361,9 @@ class TestRunCheckLayer2GlobalAllowlistFail:
         cfg_dir = tmp_path / "cfg"
         agents_dir = tmp_path / "agents"
         cfg_dir.mkdir()
-        entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+        entries = [
+            _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+        ]
         # Global allowlist contains a different model — agents' test models are absent
         cfg = _write_openclaw_config(
             cfg_dir, entries, global_models={"openrouter/other/model": {}}
@@ -350,7 +375,9 @@ class TestRunCheckLayer2GlobalAllowlistFail:
         cfg_dir = tmp_path / "cfg"
         agents_dir = tmp_path / "agents"
         cfg_dir.mkdir()
-        entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+        entries = [
+            _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+        ]
         # No global_models → agents.defaults.models key absent → KeyError → exit 1
         cfg = _write_openclaw_config(cfg_dir, entries)
         _all_agents_models_json(agents_dir)
@@ -369,7 +396,10 @@ class TestRunCheckLayer2Fail:
         cfg_dir.mkdir()
         cfg = _write_openclaw_config(
             cfg_dir,
-            [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            [
+                _agent_entry(a, f"openrouter/test/{a}-model")
+                for a in ELIS_PLATFORM_AGENTS
+            ],
             global_models=_all_test_global_models(),
         )
         # Write models.json for all except infra-val-b
@@ -384,7 +414,10 @@ class TestRunCheckLayer2Fail:
         cfg_dir.mkdir()
         cfg = _write_openclaw_config(
             cfg_dir,
-            [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            [
+                _agent_entry(a, f"openrouter/test/{a}-model")
+                for a in ELIS_PLATFORM_AGENTS
+            ],
             global_models=_all_test_global_models(),
         )
         _all_agents_models_json(agents_dir)
@@ -399,12 +432,17 @@ class TestRunCheckLayer2Fail:
         cfg_dir.mkdir()
         cfg = _write_openclaw_config(
             cfg_dir,
-            [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            [
+                _agent_entry(a, f"openrouter/test/{a}-model")
+                for a in ELIS_PLATFORM_AGENTS
+            ],
             global_models=_all_test_global_models(),
         )
         _all_agents_models_json(agents_dir)
         # Override infra-val-a with wrong model in models.json
-        _write_agent_models_json(agents_dir, "infra-val-a", ["openrouter/other/wrong-model"])
+        _write_agent_models_json(
+            agents_dir, "infra-val-a", ["openrouter/other/wrong-model"]
+        )
         assert run_check(cfg, agents_dir, c8=False) == 1
 
     def test_agent_directory_missing_exits_1(self, tmp_path):
@@ -413,7 +451,10 @@ class TestRunCheckLayer2Fail:
         cfg_dir.mkdir()
         cfg = _write_openclaw_config(
             cfg_dir,
-            [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            [
+                _agent_entry(a, f"openrouter/test/{a}-model")
+                for a in ELIS_PLATFORM_AGENTS
+            ],
             global_models=_all_test_global_models(),
         )
         # Write models.json for all but leave prog-impl-b directory absent
@@ -431,6 +472,7 @@ class TestRunCheckLayer2Fail:
 class TestSyncMode:
     def test_main_sync_exits_2(self, monkeypatch, capsys):
         import check_agent_model_registry as mod
+
         monkeypatch.setattr(sys, "argv", ["check_agent_model_registry.py", "--sync"])
         with pytest.raises(SystemExit) as exc_info:
             mod.main()
@@ -441,13 +483,16 @@ class TestSyncMode:
 
     def test_sync_does_not_mutate(self, tmp_path, monkeypatch, capsys):
         import check_agent_model_registry as mod
+
         # Even with a valid config path, --sync must not read or write it
         cfg = tmp_path / "openclaw.json"
         cfg.write_text('{"agents": {"list": []}}', encoding="utf-8")
         mtime_before = cfg.stat().st_mtime
-        monkeypatch.setattr(sys, "argv", [
-            "check_agent_model_registry.py", "--sync", "--config", str(cfg)
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["check_agent_model_registry.py", "--sync", "--config", str(cfg)],
+        )
         with pytest.raises(SystemExit):
             mod.main()
         assert cfg.stat().st_mtime == mtime_before
@@ -463,7 +508,9 @@ class TestC8Advisory:
         cfg_dir = tmp_path / "cfg"
         agents_dir = tmp_path / "agents"
         cfg_dir.mkdir()
-        entries = [_agent_entry(a, "unknown-provider/some-model") for a in ELIS_PLATFORM_AGENTS]
+        entries = [
+            _agent_entry(a, "unknown-provider/some-model") for a in ELIS_PLATFORM_AGENTS
+        ]
         cfg = _write_openclaw_config(
             cfg_dir,
             entries,
@@ -483,9 +530,16 @@ class TestC8Advisory:
 class TestAgentScope:
     def test_slr_agents_not_in_scope(self):
         slr = [
-            "harvest-impl-a", "harvest-val-b", "screen-impl-b", "screen-val-a",
-            "extract-impl-a", "extract-val-b", "synth-impl-b", "synth-val-a",
-            "prisma-impl-b", "prisma-val-a",
+            "harvest-impl-a",
+            "harvest-val-b",
+            "screen-impl-b",
+            "screen-val-a",
+            "extract-impl-a",
+            "extract-val-b",
+            "synth-impl-b",
+            "synth-val-a",
+            "prisma-impl-b",
+            "prisma-val-a",
         ]
         for agent in slr:
             assert agent not in ELIS_PLATFORM_AGENTS
@@ -521,9 +575,13 @@ def _full_fixture(
     agents_dir = tmp_path / "agents"
     cfg_dir.mkdir()
 
-    entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+    entries = [
+        _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+    ]
     # Override the target agent's model
-    entries = [e if e["id"] != agent_id else _agent_entry(agent_id, model) for e in entries]
+    entries = [
+        e if e["id"] != agent_id else _agent_entry(agent_id, model) for e in entries
+    ]
 
     global_models = {f"openrouter/test/{a}-model": {} for a in ELIS_PLATFORM_AGENTS}
     global_models[model] = {}
@@ -535,7 +593,9 @@ def _full_fixture(
             # Write minimal models.json without the target model (L3 gap)
             agent_dir = agents_dir / a / "agent"
             agent_dir.mkdir(parents=True, exist_ok=True)
-            existing_ids = [model] if include_model_in_catalog else ["openrouter/other/old"]
+            existing_ids = (
+                [model] if include_model_in_catalog else ["openrouter/other/old"]
+            )
             data = {
                 "providers": {
                     "openrouter": {
@@ -554,11 +614,17 @@ def _full_fixture(
 class TestSyncAgentCatalogue:
     def test_requires_approve_flag(self, monkeypatch, capsys):
         import check_agent_model_registry as mod
-        monkeypatch.setattr(sys, "argv", [
-            "check_agent_model_registry.py",
-            "--sync-agent-catalogue",
-            "--agent", "infra-val-b",
-        ])
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "check_agent_model_registry.py",
+                "--sync-agent-catalogue",
+                "--agent",
+                "infra-val-b",
+            ],
+        )
         with pytest.raises(SystemExit) as exc_info:
             mod.main()
         assert exc_info.value.code == 2
@@ -566,11 +632,16 @@ class TestSyncAgentCatalogue:
 
     def test_requires_agent_flag(self, monkeypatch, capsys):
         import check_agent_model_registry as mod
-        monkeypatch.setattr(sys, "argv", [
-            "check_agent_model_registry.py",
-            "--sync-agent-catalogue",
-            "--approve",
-        ])
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "check_agent_model_registry.py",
+                "--sync-agent-catalogue",
+                "--approve",
+            ],
+        )
         with pytest.raises(SystemExit) as exc_info:
             mod.main()
         assert exc_info.value.code == 2
@@ -627,22 +698,32 @@ class TestSyncAgentCatalogue:
         """--check must not create any backup files."""
         import check_agent_model_registry as mod
         import tempfile, os
+
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
             cfg_dir = td_path / "cfg"
             agents_dir = td_path / "agents"
             cfg_dir.mkdir()
             entries = [
-                _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+                _agent_entry(a, f"openrouter/test/{a}-model")
+                for a in ELIS_PLATFORM_AGENTS
             ]
-            cfg = _write_openclaw_config(cfg_dir, entries, global_models=_all_test_global_models())
+            cfg = _write_openclaw_config(
+                cfg_dir, entries, global_models=_all_test_global_models()
+            )
             _all_agents_models_json(agents_dir)
-            monkeypatch.setattr(sys, "argv", [
-                "check_agent_model_registry.py",
-                "--check",
-                "--config", str(cfg),
-                "--agents-root", str(agents_dir),
-            ])
+            monkeypatch.setattr(
+                sys,
+                "argv",
+                [
+                    "check_agent_model_registry.py",
+                    "--check",
+                    "--config",
+                    str(cfg),
+                    "--agents-root",
+                    str(agents_dir),
+                ],
+            )
             mod.main()
             # Confirm no backup files created anywhere under agents_dir
             backups = list(agents_dir.rglob("models.json.bak.*"))

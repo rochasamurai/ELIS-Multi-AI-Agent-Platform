@@ -30,6 +30,7 @@ Modes:
                 Never touches openclaw.json or any agent other than --agent.
                 Creates a timestamped backup before writing.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -84,7 +85,9 @@ def load_global_model_allowlist(config_path: Path) -> set[str]:
     return set(allowlist.keys())
 
 
-def check_model_in_global_allowlist(model: str, allowlist: set[str]) -> tuple[bool, str]:
+def check_model_in_global_allowlist(
+    model: str, allowlist: set[str]
+) -> tuple[bool, str]:
     """
     Check that model is in the global allowlist.
     Supports exact match and provider wildcard (e.g. 'openrouter/*').
@@ -96,7 +99,10 @@ def check_model_in_global_allowlist(model: str, allowlist: set[str]) -> tuple[bo
     wildcard = f"{provider}/*"
     if wildcard in allowlist:
         return True, f"wildcard match '{wildcard}' in agents.defaults.models"
-    return False, f"model '{model}' not found in agents.defaults.models (no exact or wildcard match)"
+    return (
+        False,
+        f"model '{model}' not found in agents.defaults.models (no exact or wildcard match)",
+    )
 
 
 def check_model_in_agent_catalog(
@@ -133,7 +139,9 @@ def check_c8(models: dict[str, Optional[str]]) -> None:
         if model is None:
             continue
         if not any(model.startswith(p) for p in KNOWN_PROVIDER_PREFIXES):
-            print(f"  [C8-WARN] {agent_id}: model '{model}' has unrecognised provider prefix")
+            print(
+                f"  [C8-WARN] {agent_id}: model '{model}' has unrecognised provider prefix"
+            )
 
 
 def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
@@ -200,9 +208,13 @@ def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
 
     print()
     if gaps:
-        print(f"RESULT: FAIL — {len(gaps)} agent(s) failed registry check: {', '.join(gaps)}")
+        print(
+            f"RESULT: FAIL — {len(gaps)} agent(s) failed registry check: {', '.join(gaps)}"
+        )
         return 1
-    print("RESULT: PASS — all ELIS Platform agents pass three-layer model registry check")
+    print(
+        "RESULT: PASS — all ELIS Platform agents pass three-layer model registry check"
+    )
     return 0
 
 
@@ -322,8 +334,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", default=False)
     parser.add_argument("--sync", action="store_true", default=False)
-    parser.add_argument("--sync-agent-catalogue", action="store_true", default=False,
-                        dest="sync_agent_catalogue")
+    parser.add_argument(
+        "--sync-agent-catalogue",
+        action="store_true",
+        default=False,
+        dest="sync_agent_catalogue",
+    )
     parser.add_argument("--approve", action="store_true", default=False)
     parser.add_argument("--agent", type=str, default=None)
     parser.add_argument("--c8", action="store_true", default=False)
@@ -340,7 +356,9 @@ def main() -> int:
 
     if args.sync_agent_catalogue:
         if not args.approve:
-            print("ERROR: --sync-agent-catalogue requires --approve to confirm mutation.")
+            print(
+                "ERROR: --sync-agent-catalogue requires --approve to confirm mutation."
+            )
             sys.exit(2)
         if not args.agent:
             print("ERROR: --sync-agent-catalogue requires --agent AGENT_ID.")
