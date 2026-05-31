@@ -174,7 +174,7 @@ def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
             continue
 
         print(f"  CHECK {agent_id}: {model}")
-        print(f"        L1: PASS (openclaw.json)")
+        print("        L1: PASS (openclaw.json)")
 
         agent_failed = False
 

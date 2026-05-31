@@ -697,7 +697,7 @@ class TestSyncAgentCatalogue:
     def test_check_mode_still_readonly(self, monkeypatch, capsys):
         """--check must not create any backup files."""
         import check_agent_model_registry as mod
-        import tempfile, os
+        import tempfile
 
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
