@@ -345,3 +345,114 @@ These workarounds are not needed on elis-server (Ubuntu).
 **Detection:** `python scripts/check_review.py` exits non-zero with message indicating missing fenced block in Evidence.
 
 **Rule added:** Always run `REVIEW_FILE=REVIEW_PE_<ID>.md python scripts/check_review.py` before pushing the REVIEW file. The `### Evidence` section must contain at least one fenced code block enclosing actual command output — prose description alone is not sufficient.
+
+---
+
+## LL-17 — Mandatory Dispatch Reset Gate before every agent dispatch
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Classification | PM_DISPATCH_MISSING_TARGET_AGENT_RESET |
+| AGENTS.md rule | §2 — evidence-first; new rule added to `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` |
+
+**Error:** PM dispatched infra-val-b for a new validation round without resetting or acknowledging the agent's stale session (88k+ input tokens, prior PE context). The agent ran in its old context, rendering the validation evidence unreliable.
+
+**Root cause:** No formal pre-dispatch reset requirement existed. PM assumed the agent would start clean on a new dispatch.
+
+**Rule added:** Before every agent dispatch, the target agent must produce a 14-field reset/binding acknowledgement: `agent_id`, `pe_id`, `role_task`, `session_key`, `worktree`, `git_root`, `branch`, `head`, `git_status`, `git_identity`, `runtime_model`, `prior_context_discarded`, `authorised_write_scope`, `timestamp`. Sessions exceeding 50k tokens must be reset via `--session-key` before dispatch. The PM must receive and accept the ack before authorising the substantive task. Documented in `ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` §Dispatch Reset Gate.
+
+---
+
+## LL-18 — Three-layer model registry check: L1/L2/L3
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Agent | Claude Code (PM / Implementer) |
+| AGENTS.md rule | §2.4 — evidence-first; new governance artefact |
+
+**Error:** Initial model registry check (Gate 2A) only verified `openclaw.json` per-agent model fields (L1). It missed the global allowlist (`agents.defaults.models` — L2) and per-agent `models.json` catalogues (L3), leaving model drift undetected.
+
+**Rule added:** `scripts/check_agent_model_registry.py` implements a three-layer check:
+- L1: `openclaw.json → agents.list[].model` — agent exists with non-empty model field
+- L2: `openclaw.json → agents.defaults.models` — model appears in global allowlist (exact or provider-wildcard match)
+- L3: `~/.openclaw/agents/<agentId>/agent/models.json` — model registered in per-agent runtime catalogue
+
+All three layers must PASS for an infra agent to be considered model-registry-compliant. L3 failures for programme agents are tracked separately as known drift.
+
+---
+
+## LL-19 — `--sync-agent-catalogue` as controlled L3 repair fallback
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Agent | Claude Code (Implementer) |
+| AGENTS.md rule | §2.3 — file ownership; no unilateral config mutation |
+
+**Error:** After discovering infra-val-b L3 FAIL (model absent from `models.json`), there was no governed path to repair the per-agent catalogue without touching `openclaw.json` or performing an uncontrolled file edit.
+
+**Rule added:** `--sync-agent-catalogue --approve --agent <agentId>` mode added to `check_agent_model_registry.py`. Requirements: `--approve` flag must be explicit (prevents accidental mutation); `--agent` must name exactly one agent; creates a timestamped backup (`models.json.bak.<YYYYMMDDTHHMMSSZ>`) before mutation; appends a minimal model entry to the matching provider block; validates JSON; re-runs the three-layer check. Never touches `openclaw.json`. This is the only authorised path for L3 repair without a full OpenClaw config change.
+
+---
+
+## LL-20 — OpenClaw CLI PATH/version mismatch
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Agent | Claude Code (PM) |
+| AGENTS.md rule | §2.4 — evidence must be from authoritative source |
+
+**Error:** The PATH-resolved `openclaw` binary (`/opt/openclaw/tools/node-v22.22.0/bin/openclaw`, v2026.4.21) lacked the `--session-key` flag and had a gateway protocol mismatch with the running v2026.5.27 gateway. Commands appeared to run but produced unreliable or blocked output.
+
+**Root cause:** PATH contains an older openclaw binary. The canonical current binary is `/opt/openclaw/bin/openclaw` (v2026.5.27).
+
+**Rule added:** Always invoke the full path `/opt/openclaw/bin/openclaw` for agent dispatch, `--session-key`, and any flag introduced after v2026.4.21. Never rely on PATH-resolved `openclaw` for production dispatch. The `--local` flag is an approved fallback for gateway protocol mismatches but must be noted in the Status Packet as an execution path deviation. Resolve the PATH mismatch as a follow-up PE.
+
+---
+
+## LL-21 — Model provenance via executionTrace/agentMeta, not agent self-report
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Agent | Claude Code (PM/Validator) |
+| AGENTS.md rule | §2.4 — evidence-first; authoritative source for model identity |
+
+**Error:** Initial model-resilient validation attempts used `sessions_spawn` with an explicit `model` parameter. The spawn returned `modelApplied: true` but the actual runtime model remained the caller's model (claude-sonnet). `MODEL_DIFFERS` was falsely YES based on self-report, not execution evidence.
+
+**Root cause:** `sessions_spawn` inherits the caller's model context regardless of the `model` parameter. `modelApplied: true` reflects the parameter being accepted, not the model actually being used.
+
+**Rule added:** For ELIS model-resilience validation, the authoritative model evidence is `executionTrace.winnerProvider` + `executionTrace.winnerModel` from the DISPATCH_PROVENANCE_PROOF_V1 schema, or the `agentMeta` field in session output — not the agent's self-reported model string. A `MODEL_DIFFERS: YES` claim in a REVIEW file is only valid if backed by one of these authoritative fields. PM-spawned sub-agents are not a reliable path for cross-model validation; use direct OpenClaw agent dispatch (`/opt/openclaw/bin/openclaw agent run ... --session-key`) with a fresh session.
+
+---
+
+## LL-22 — Token/context overload requires compact validation mode
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Agent | Claude Code (PM/Validator) |
+| AGENTS.md rule | §2.5 — session boundaries; stale context invalidates evidence |
+
+**Error:** infra-val-b accumulated 88k+ input tokens across prior PE sessions. A dispatch attempt resulted in exit 137 (OOM kill). The validation run was lost and had to be restarted with a fresh session key.
+
+**Root cause:** No mechanism existed to detect or prevent dispatch to an agent whose context exceeded safe limits. The 50k-token reset threshold was not formalised.
+
+**Rule added (interim):** Sessions exceeding 50k input tokens must be reset before dispatch (see LL-17 Dispatch Reset Gate). A follow-up PE should implement compact validation mode: a stateless, read-only validation path that loads only the target files and test suite, with no accumulated conversational context. This mode is particularly important for validators that run after multiple prior sessions on the same agent surface.
+
+---
+
+## LL-23 — OpenClaw CLI/API-first rule: no direct config file mutation
+
+| Field | Value |
+|---|---|
+| First seen | PE-OPS-A2A-PRODUCTION-02 (2026-05-31) |
+| Agent | Claude Code (PM) |
+| AGENTS.md rule | §2 — PM must not edit openclaw.json; route via gateway/Supervisor |
+
+**Error:** During model registry remediation, there was pressure to directly edit `openclaw.json` or agent `models.json` files to fix L2/L3 failures quickly. Direct mutation without a governed path risks JSON corruption, undocumented drift, and loss of backup/audit trail.
+
+**Rule added:** All OpenClaw runtime config changes must go through the OpenClaw CLI or API (e.g. `gateway config.schema.patch`, `--sync-agent-catalogue`). Direct file edits to `openclaw.json` are prohibited without explicit PM/Supervisor authorisation and a backup. The `--sync-agent-catalogue` mode was created specifically to satisfy this rule for L3 repairs. A follow-up PE should document this as a formal OpenClaw CLI/API-first rule in `AGENTS.md` or a dedicated governance document.

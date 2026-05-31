@@ -1,8 +1,12 @@
 {
-  "current_state": "planning",
+  "current_state": "merged",
   "pe_id": "PE-OPS-A2A-PRODUCTION-02",
   "branch": "feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls",
+  "merge_commit": "e75394f553abdace003bdf90c17133d9dcab87a9",
+  "merged_at": "2026-05-31",
   "implementer": "infra-impl-a",
   "validator": "infra-val-b",
-  "note": "Opened PM-CHORE-108 (2026-05-29). Supersedes contaminated PE-OPS-A2A-PRODUCTION-01. Objective: productionise A2A dispatch under provenance controls. Baseline: adbae97fa96af1877106ca4523ee05340f5d1a6a. Implementer dispatch HELD — TEMPORARY_DELEGATE_TASK_EXCEPTION and PE_TASK.md must be committed first. A2A disabled by default; no runtime directory creation without gate approval."
+  "gate_2a": "PASS",
+  "gate_2b": "DEFERRED — /opt/elis/a2a/.enabled not created; A2A transport disabled by default",
+  "note": "Merged PR #461 (2026-05-31). Gate 2A complete: 3-layer model registry check, --sync-agent-catalogue mode, mandatory dispatch reset gate, model-resilient validation (infra-val-b, openrouter/z-ai/glm-5.1, MODEL_DIFFERS=YES). Gate 2B deferred pending operational decision. Six follow-ups carried forward to LESSONS_LEARNED.md."
 }
