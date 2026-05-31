@@ -305,3 +305,132 @@ Required checks for every PE dispatch:
 5. **Persistent context check** (`scripts/check_persistent_context_files.py`) — verifies runtime/bootstrap files exist in the expected location
 
 ---
+## Model Binding Requirement for ELIS Agent Dispatch
+
+**Added: PE-OPS-A2A-PRODUCTION-02**
+
+### Requirement
+
+Every `sessions_spawn.agentId` dispatch to an ELIS Platform agent MUST include an explicit
+`model` parameter matching the target agent's live `~/.openclaw/openclaw.json` model entry.
+
+`agentId` controls workspace routing and session identity only. Without an explicit `model`
+parameter, OpenClaw inherits the caller's model — violating ELIS 2-agent model resilience.
+
+### Required dispatch parameters
+
+| Parameter          | Requirement                                                    |
+|--------------------|----------------------------------------------------------------|
+| `agentId`          | Assigned agent from live config                                |
+| `model`            | Must match agent's `model` field in live `~/.openclaw/openclaw.json`; or named PO exception required |
+| `cwd`              | Agent workspace from live config                               |
+| `context`          | `"isolated"`                                                   |
+| `cleanup`          | `"keep"`                                                       |
+| `runtime`          | `"subagent"`                                                   |
+| `taskName`         | Must include PE ID and gate label                              |
+| `runTimeoutSeconds`| Bounded value (≤ 600)                                          |
+
+### Live ELIS Platform agent model registry
+
+Source: `/home/samurai/.openclaw/openclaw.json` (authoritative — re-read immediately before dispatch)
+
+| ELIS agent     | Configured model                        |
+|----------------|-----------------------------------------|
+| infra-impl-a   | openrouter/qwen/qwen3-coder-flash       |
+| infra-impl-b   | openrouter/deepseek/deepseek-v4-flash   |
+| infra-val-a    | openrouter/deepseek/deepseek-v4-pro     |
+| infra-val-b    | openrouter/z-ai/glm-5.1                 |
+| prog-impl-a    | (read from live config before dispatch) |
+| prog-impl-b    | (read from live config before dispatch) |
+| prog-val-a     | (read from live config before dispatch) |
+| prog-val-b     | (read from live config before dispatch) |
+
+Values for prog-* agents must be read from live config immediately before dispatch — they are not reproduced here to avoid drift.
+
+### Validation tool
+
+`scripts/check_agent_model_registry.py` — validates that all ELIS Platform agents in scope have
+an explicit model entry in the live OpenClaw config. Run with `--check` (default). CI-safe.
+
+```bash
+python scripts/check_agent_model_registry.py --check
+```
+
+### Exceptions
+
+Any dispatch using a model other than the agent's live config entry requires a named, PO-approved
+exception recorded in the opening Status Packet of the affected PE gate. Exception must name:
+- The actual model used
+- The configured model
+- The PO approval reference (PM-CHORE or PE ID)
+
+### ELIS 2-agent model resilience rule
+
+Implementer and Validator for any PE gate must run on different AI models. If both sessions
+inherit the same caller model, the resilience requirement is not met. The `model` parameter
+in `sessions_spawn` is the mechanism that enforces this.
+
+## Three-Layer Model Registry Check
+
+OpenClaw model execution requires consistency across three layers:
+
+| Layer | Source | Check |
+|---|---|---|
+| L1 | `openclaw.json` → `agents.list[].model` | Agent has non-empty configured model |
+| L2 | `openclaw.json` → `agents.defaults.models` | Configured model appears in global allowlist (exact or provider wildcard) |
+| L3 | `/home/samurai/.openclaw/agents/<agentId>/agent/models.json` | Configured model registered in per-agent catalogue |
+
+All three layers must pass for an agent to be considered model-registry compliant.
+`scripts/check_agent_model_registry.py --check` validates all three layers.
+
+## Dispatch Reset Gate (mandatory for every agent activation)
+
+**Classification of violation:** PM_DISPATCH_MISSING_TARGET_AGENT_RESET
+
+Every implementer dispatch, validator dispatch, re-dispatch, remediation pass, validation retry,
+and direct OpenClaw agent invocation MUST begin with a target-agent reset and an explicit
+reset/binding acknowledgement before any PE work or validation prompt is issued.
+
+Failure to obtain a reset acknowledgement before dispatch is a workflow violation regardless of
+whether subsequent outputs appear correct.
+
+### Mandatory reset/binding acknowledgement fields
+
+The target agent must confirm all of the following before work begins:
+
+| Field | Description |
+|---|---|
+| agent_id | Canonical agent ID (e.g. `infra-val-b`) |
+| pe_id | PE being worked (e.g. `PE-OPS-A2A-PRODUCTION-02`) |
+| role_task | Role and task description (e.g. `infra-val / sync-mode validation`) |
+| session_key | Active session key or session ID |
+| worktree | Absolute path of fixed worktree (must match agent's assigned worktree) |
+| git_root | Output of `git rev-parse --show-toplevel` |
+| branch | Output of `git branch --show-current` |
+| head | Output of `git rev-parse HEAD` (short SHA) |
+| git_status | Output of `git status -sb` (must be clean before starting) |
+| git_identity | `git config user.name` / `git config user.email` |
+| runtime_model | Actual provider/model from `executionTrace.winnerProvider` / `agentMeta.model` where available |
+| prior_context_discarded | Confirmation that stale accumulated session context is not present |
+| authorised_write_scope | Explicit list of files/paths the agent is permitted to write |
+| timestamp | UTC timestamp of acknowledgement |
+
+### Direct OpenClaw agent validation — session context rule
+
+When PM invokes `openclaw agent --agent <id> --local` for GLM-native or direct validation:
+
+- PM must use a **fresh or reset session** for the target agent.
+- Reusing `agent:<id>:main` with stale accumulated context from prior PE work is prohibited.
+- A session with >50k input tokens of prior context must be treated as stale and reset before
+  issuing new validation work.
+- The `--local` path with embedded runner is the approved fallback when gateway protocol mismatch
+  prevents standard `openclaw agent` routing. This must be noted in the Status Packet.
+
+### Enforcement
+
+- No PE gate (implementation, validation, remediation) may be recorded as started until the
+  reset/binding acknowledgement is pasted into the Status Packet.
+- PM must verify the acknowledgement fields match the expected PE branch, HEAD, and worktree
+  before accepting any work output from that session.
+- Token budget awareness: if a prior validation call consumed >50k input tokens, PM must
+  assume session context is overloaded and request a reset before the next call.

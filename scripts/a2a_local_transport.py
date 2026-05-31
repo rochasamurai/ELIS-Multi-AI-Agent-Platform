@@ -14,7 +14,7 @@ GOVERNANCE BOUNDARY (non-negotiable):
   - Messages exchanged here are internal coordination signals only.
 
 Transport mechanics:
-  - Mailbox root: /tmp/elis_a2a/
+  - Mailbox root: /opt/elis/a2a/mailboxes/
   - Each message is written as a single JSON file: <mailbox_root>/<recipient>/<message_id>.json
   - No sockets, no HTTP, no network calls of any kind.
   - Schema validation uses jsonschema when available; falls back to required-field check.
@@ -30,7 +30,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 _SCHEMA_PATH = Path(__file__).parent.parent / "schemas" / "a2a_message.schema.json"
-_MAILBOX_ROOT = Path("/tmp/elis_a2a")
+_A2A_RUNTIME_ROOT = Path("/opt/elis/a2a")
+_MAILBOX_ROOT = _A2A_RUNTIME_ROOT / "mailboxes"
+_ENABLED_SENTINEL = _A2A_RUNTIME_ROOT / ".enabled"
+
+
+class A2ATransportDisabledError(RuntimeError):
+    """Raised when the ELIS A2A transport is used before it has been enabled."""
+
 
 _VALID_MESSAGE_TYPES = frozenset(
     ["status", "reset_ack", "task_state", "evidence_ref", "failure"]
@@ -145,13 +152,25 @@ class A2ATransport:
     can_bypass_po_approval: bool = False
     can_bypass_gate_checks: bool = False
 
-    def __init__(self, mailbox_root: Path = _MAILBOX_ROOT) -> None:
+    def __init__(
+        self,
+        mailbox_root: Path = _MAILBOX_ROOT,
+        *,
+        skip_enabled_check: bool = False,
+    ) -> None:
         self._root = Path(mailbox_root)
+        if not skip_enabled_check and not _ENABLED_SENTINEL.exists():
+            raise A2ATransportDisabledError(
+                f"ELIS A2A transport is disabled. "
+                f"Enable marker not found: {_ENABLED_SENTINEL}"
+            )
 
     def _mailbox(self, recipient: str) -> Path:
-        box = self._root / recipient
-        box.mkdir(parents=True, exist_ok=True)
-        return box
+        inbox = self._root / recipient / "inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        (self._root / recipient / "processed").mkdir(parents=True, exist_ok=True)
+        (self._root / recipient / "dead").mkdir(parents=True, exist_ok=True)
+        return inbox
 
     def send(self, message: A2AMessage) -> Path:
         """
@@ -168,35 +187,37 @@ class A2ATransport:
 
     def receive(self, recipient: str) -> list[A2AMessage]:
         """
-        Return all pending messages for *recipient* and remove them from the mailbox.
-
-        Messages are returned in filesystem order (typically arrival order).
+        Return all pending messages from the recipient's inbox and move them
+        to processed/. Corrupt files are moved to dead/.
         """
-        box = self._root / recipient
-        if not box.is_dir():
+        inbox = self._root / recipient / "inbox"
+        if not inbox.is_dir():
             return []
+        processed = self._root / recipient / "processed"
+        dead = self._root / recipient / "dead"
+        processed.mkdir(parents=True, exist_ok=True)
+        dead.mkdir(parents=True, exist_ok=True)
         messages: list[A2AMessage] = []
-        for path in sorted(box.iterdir()):
+        for path in sorted(inbox.iterdir()):
             if path.suffix != ".json":
                 continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 messages.append(A2AMessage.from_dict(data))
-                path.unlink()
+                path.rename(processed / path.name)
             except (json.JSONDecodeError, KeyError):
-                # Corrupt file — skip silently; do not crash the transport.
-                pass
+                path.rename(dead / path.name)
         return messages
 
     def list_messages(self, recipient: str) -> list[A2AMessage]:
         """
-        Return all pending messages for *recipient* WITHOUT removing them.
+        Return all pending messages from the recipient's inbox WITHOUT removing them.
         """
-        box = self._root / recipient
-        if not box.is_dir():
+        inbox = self._root / recipient / "inbox"
+        if not inbox.is_dir():
             return []
         messages: list[A2AMessage] = []
-        for path in sorted(box.iterdir()):
+        for path in sorted(inbox.iterdir()):
             if path.suffix != ".json":
                 continue
             try:

@@ -1,8 +1,8 @@
 {
-  "current_state": "implementing",
-  "pe_id": "PE-OPS-A2A-PRODUCTION-01",
-  "branch": "feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production",
+  "current_state": "planning",
+  "pe_id": "PE-OPS-A2A-PRODUCTION-02",
+  "branch": "feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls",
   "implementer": "infra-impl-a",
   "validator": "infra-val-b",
-  "note": "Opened PM-CHORE-107 (2026-05-28). Objective: put A2A internal agent communication into production. Baseline: 83f91cd9ca8f955cd804ec58039a3a28f1e563c6. Implementer hold — dispatch not yet issued. No runtime config edits, no service restarts without PO approval."
+  "note": "Opened PM-CHORE-108 (2026-05-29). Supersedes contaminated PE-OPS-A2A-PRODUCTION-01. Objective: productionise A2A dispatch under provenance controls. Baseline: adbae97fa96af1877106ca4523ee05340f5d1a6a. Implementer dispatch HELD — TEMPORARY_DELEGATE_TASK_EXCEPTION and PE_TASK.md must be committed first. A2A disabled by default; no runtime directory creation without gate approval."
 }
