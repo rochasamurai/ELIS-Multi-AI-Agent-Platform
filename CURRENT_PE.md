@@ -21,14 +21,15 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | — (no active PE; PE-OPS-A2A-PRODUCTION-02 merged 2026-05-31, Gate 2B deferred) |
-| Branch  | — |
+| PE      | PE-OPS-OPENCLAW-CLI-PATH-01 |
+| Branch  | feature/pe-ops-openclaw-cli-path-01-fix-openclaw-binary-path-resolution |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| — | — |
+| infra-impl-b | Implementer |
+| infra-val-a  | Validator   |
 
 
 ---
@@ -47,6 +48,7 @@
 | PE-GOV-RISK-TIER-01 | governance | infra-impl-a         | infra-val-b        | feature/pe-gov-risk-tier-01-add-risk-tiered-pe-protocol | blocked         | 2026-05-06   |
 | PE-OPS-FIXED-WORKSPACES-01 | fixed-workspaces | infra-impl-b | infra-val-a | feature/pe-ops-fixed-workspaces-01-adopt-fixed-agent-workspace-and-github-write-boundary-model | merged | 2026-05-07 |
 | PE-OPS-A2A-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-a2a-01-phase-1-communication-matrix-clean-opening | merged | 2026-05-17 |
+| PE-OPS-OPENCLAW-CLI-PATH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-openclaw-cli-path-01-fix-openclaw-binary-path-resolution | implementing | 2026-05-31 |
 | PE-OPS-A2A-PRODUCTION-02 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls | merged (Gate 2B deferred) | 2026-05-31 |
 | PE-OPS-A2A-PRODUCTION-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production | CONTAMINATED / SUPERSEDED | 2026-05-29 |
 | PE-OPS-GITHUB-01 | github          | infra-impl-a         | infra-val-b        | feature/pe-ops-github-01-elis-github-agent-role-and-permission-model | merged          | 2026-05-06   |
