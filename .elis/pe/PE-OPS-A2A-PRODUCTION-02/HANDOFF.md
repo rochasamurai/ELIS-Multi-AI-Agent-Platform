@@ -265,3 +265,30 @@ Running against actual live config produces FAIL for all 8 scoped agents (per-ag
 ### Read-only confirmation
 
 The script performs no writes in any mode. `--sync` exits 2 immediately without reading or modifying any file.
+
+---
+
+## Gate 2A-model-fix global allowlist correction pass
+
+### Change
+
+Global allowlist (L2) added as the new Layer 2 between the openclaw.json model check (L1)
+and the per-agent catalog check (renumbered L3).
+
+`scripts/check_agent_model_registry.py` now performs a three-layer check:
+- L1: `openclaw.json` → `agents.list[].model` — agent present with non-empty model
+- L2: `openclaw.json` → `agents.defaults.models` — model in global allowlist (exact or provider wildcard)
+- L3: `/home/samurai/.openclaw/agents/<agentId>/agent/models.json` — model in per-agent catalogue
+
+New functions: `load_global_model_allowlist()`, `check_model_in_global_allowlist()`.
+
+`tests/test_check_agent_model_registry.py` updated:
+- New classes: `TestLoadGlobalModelAllowlist` (3 tests), `TestCheckModelInGlobalAllowlist` (4 tests), `TestRunCheckLayer2GlobalAllowlistFail` (2 tests)
+- All existing run_check fixture configs updated to include `agents.defaults.models` so L2 is satisfied in L1/L3 isolation tests
+- All 27 existing tests continue to pass; total 36 tests
+
+`docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md`: Three-Layer Model Registry Check section appended.
+
+### Read-only confirmation
+
+Script remains fully read-only in all modes. No json.dump, no mkdir, no unlink, no writes of any kind.

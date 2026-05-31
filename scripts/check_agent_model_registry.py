@@ -2,12 +2,17 @@
 ELIS Platform Agent Model Registry Checker — PE-OPS-A2A-PRODUCTION-02
 
 Validates that every ELIS Platform agent in scope has an explicit model
-entry in the live OpenClaw config AND that the same model is registered
-in the agent's per-agent models.json catalog.
+entry in the live OpenClaw config, that the same model appears in the
+global model allowlist, and that the model is registered in the agent's
+per-agent models.json catalog.
 
-Two-layer check:
-  Layer 1: /home/samurai/.openclaw/openclaw.json — agent exists with non-empty model field
-  Layer 2: /home/samurai/.openclaw/agents/<agentId>/agent/models.json — model id present
+Three-layer check:
+  Layer 1 (L1): /home/samurai/.openclaw/openclaw.json → agents.list[].model
+                agent exists with non-empty model field
+  Layer 2 (L2): /home/samurai/.openclaw/openclaw.json → agents.defaults.models
+                configured model appears in global allowlist (exact or provider wildcard)
+  Layer 3 (L3): /home/samurai/.openclaw/agents/<agentId>/agent/models.json
+                configured model registered in per-agent catalogue
 
 Usage:
   python scripts/check_agent_model_registry.py [--check] [--sync] [--c8]
@@ -60,6 +65,33 @@ def load_agent_models(config_path: Path) -> dict[str, Optional[str]]:
     return {a.get("id", ""): a.get("model") for a in agents if a.get("id")}
 
 
+def load_global_model_allowlist(config_path: Path) -> set[str]:
+    """Return set of model IDs from agents.defaults.models (keys of the dict)."""
+    with config_path.open(encoding="utf-8") as fh:
+        cfg = json.load(fh)
+    allowlist = cfg.get("agents", {}).get("defaults", {}).get("models", None)
+    if allowlist is None:
+        raise KeyError("agents.defaults.models missing from config")
+    if not isinstance(allowlist, dict):
+        raise ValueError("agents.defaults.models must be a dict")
+    return set(allowlist.keys())
+
+
+def check_model_in_global_allowlist(model: str, allowlist: set[str]) -> tuple[bool, str]:
+    """
+    Check that model is in the global allowlist.
+    Supports exact match and provider wildcard (e.g. 'openrouter/*').
+    Returns (found: bool, detail: str).
+    """
+    if model in allowlist:
+        return True, "exact match in agents.defaults.models"
+    provider = model.split("/")[0]
+    wildcard = f"{provider}/*"
+    if wildcard in allowlist:
+        return True, f"wildcard match '{wildcard}' in agents.defaults.models"
+    return False, f"model '{model}' not found in agents.defaults.models (no exact or wildcard match)"
+
+
 def check_model_in_agent_catalog(
     agent_id: str, model: str, agents_root: Path
 ) -> tuple[bool, str]:
@@ -104,8 +136,14 @@ def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
         print(f"ERROR: Cannot load config from {config_path}: {exc}")
         return 1
 
+    try:
+        global_allowlist = load_global_model_allowlist(config_path)
+    except (KeyError, ValueError) as exc:
+        print(f"ERROR: Cannot load global model allowlist: {exc}")
+        return 1
+
     gaps: list[str] = []
-    print(f"ELIS Platform Agent Model Registry Check")
+    print("ELIS Platform Agent Model Registry Check")
     print(f"  openclaw config : {config_path}")
     print(f"  agents root     : {agents_root}")
     print()
@@ -113,7 +151,7 @@ def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
     for agent_id in ELIS_PLATFORM_AGENTS:
         model = all_models.get(agent_id)
 
-        # Layer 1: openclaw.json
+        # L1: openclaw.json — agent present with non-empty model
         if not model:
             print(f"  FAIL  {agent_id}")
             print(f"        L1: agent missing or model empty in {config_path}")
@@ -123,12 +161,25 @@ def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
         print(f"  CHECK {agent_id}: {model}")
         print(f"        L1: PASS (openclaw.json)")
 
-        # Layer 2: per-agent models.json
-        found, detail = check_model_in_agent_catalog(agent_id, model, agents_root)
-        if found:
-            print(f"        L2: PASS ({detail})")
+        agent_failed = False
+
+        # L2: global model allowlist — agents.defaults.models
+        l2_ok, l2_detail = check_model_in_global_allowlist(model, global_allowlist)
+        if l2_ok:
+            print(f"        L2: PASS ({l2_detail})")
         else:
-            print(f"        L2: FAIL ({detail})")
+            print(f"        L2: FAIL ({l2_detail})")
+            agent_failed = True
+
+        # L3: per-agent models.json catalog
+        l3_ok, l3_detail = check_model_in_agent_catalog(agent_id, model, agents_root)
+        if l3_ok:
+            print(f"        L3: PASS ({l3_detail})")
+        else:
+            print(f"        L3: FAIL ({l3_detail})")
+            agent_failed = True
+
+        if agent_failed:
             gaps.append(agent_id)
 
     if c8:
@@ -144,7 +195,7 @@ def run_check(config_path: Path, agents_root: Path, c8: bool) -> int:
     if gaps:
         print(f"RESULT: FAIL — {len(gaps)} agent(s) failed registry check: {', '.join(gaps)}")
         return 1
-    print("RESULT: PASS — all ELIS Platform agents pass two-layer model registry check")
+    print("RESULT: PASS — all ELIS Platform agents pass three-layer model registry check")
     return 0
 
 

@@ -15,7 +15,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 from check_agent_model_registry import (
     ELIS_PLATFORM_AGENTS,
     check_model_in_agent_catalog,
+    check_model_in_global_allowlist,
     load_agent_models,
+    load_global_model_allowlist,
     run_check,
 )
 
@@ -25,8 +27,15 @@ from check_agent_model_registry import (
 # ---------------------------------------------------------------------------
 
 
-def _write_openclaw_config(tmp_path: Path, agent_entries: list[dict]) -> Path:
-    cfg = {"agents": {"list": agent_entries}}
+def _write_openclaw_config(
+    tmp_path: Path,
+    agent_entries: list[dict],
+    global_models: dict | None = None,
+) -> Path:
+    agents_section: dict = {"list": agent_entries}
+    if global_models is not None:
+        agents_section["defaults"] = {"models": global_models}
+    cfg = {"agents": agents_section}
     p = tmp_path / "openclaw.json"
     p.write_text(json.dumps(cfg), encoding="utf-8")
     return p
@@ -68,6 +77,11 @@ def _all_agents_models_json(agents_root: Path) -> None:
         _write_agent_models_json(agents_root, a, [f"openrouter/test/{a}-model"])
 
 
+def _all_test_global_models() -> dict:
+    """Return agents.defaults.models dict covering all ELIS platform test models."""
+    return {f"openrouter/test/{a}-model": {} for a in ELIS_PLATFORM_AGENTS}
+
+
 # ---------------------------------------------------------------------------
 # load_agent_models
 # ---------------------------------------------------------------------------
@@ -92,6 +106,41 @@ class TestLoadAgentModels:
         cfg = _write_openclaw_config(tmp_path, [{"model": "openrouter/x/y"}])
         result = load_agent_models(cfg)
         assert "" not in result
+
+
+# ---------------------------------------------------------------------------
+# load_global_model_allowlist
+# ---------------------------------------------------------------------------
+
+
+class TestLoadGlobalModelAllowlist:
+    def test_returns_set_of_model_ids(self, tmp_path):
+        cfg = _write_openclaw_config(
+            tmp_path,
+            [_agent_entry("infra-impl-a", "openrouter/qwen/qwen3-coder-flash")],
+            global_models={
+                "openrouter/qwen/qwen3-coder-flash": {},
+                "openrouter/z-ai/glm-5.1": {},
+            },
+        )
+        result = load_global_model_allowlist(cfg)
+        assert result == {"openrouter/qwen/qwen3-coder-flash", "openrouter/z-ai/glm-5.1"}
+
+    def test_raises_when_key_missing(self, tmp_path):
+        cfg = _write_openclaw_config(tmp_path, [_agent_entry("infra-impl-a", "openrouter/x/y")])
+        with pytest.raises(KeyError, match="agents.defaults.models missing from config"):
+            load_global_model_allowlist(cfg)
+
+    def test_raises_when_not_dict(self, tmp_path):
+        agents_section: dict = {
+            "list": [_agent_entry("infra-impl-a", "openrouter/x/y")],
+            "defaults": {"models": ["openrouter/x/y"]},
+        }
+        cfg_data = {"agents": agents_section}
+        p = tmp_path / "openclaw.json"
+        p.write_text(json.dumps(cfg_data), encoding="utf-8")
+        with pytest.raises(ValueError, match="agents.defaults.models must be a dict"):
+            load_global_model_allowlist(p)
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +207,47 @@ class TestCheckModelInAgentCatalog:
 
 
 # ---------------------------------------------------------------------------
-# run_check — two-layer PASS
+# check_model_in_global_allowlist
+# ---------------------------------------------------------------------------
+
+
+class TestCheckModelInGlobalAllowlist:
+    def test_exact_match_pass(self):
+        allowlist = {"openrouter/qwen/qwen3-coder-flash", "openrouter/z-ai/glm-5.1"}
+        found, detail = check_model_in_global_allowlist(
+            "openrouter/qwen/qwen3-coder-flash", allowlist
+        )
+        assert found is True
+        assert "exact match" in detail
+
+    def test_exact_match_fail(self):
+        allowlist = {"openrouter/other/model"}
+        found, detail = check_model_in_global_allowlist(
+            "openrouter/qwen/qwen3-coder-flash", allowlist
+        )
+        assert found is False
+        assert "not found" in detail
+
+    def test_wildcard_match_pass(self):
+        allowlist = {"openrouter/*"}
+        found, detail = check_model_in_global_allowlist(
+            "openrouter/z-ai/glm-5.1", allowlist
+        )
+        assert found is True
+        assert "wildcard" in detail
+        assert "openrouter/*" in detail
+
+    def test_wildcard_no_match(self):
+        allowlist = {"claude-cli/*"}
+        found, detail = check_model_in_global_allowlist(
+            "openrouter/z-ai/glm-5.1", allowlist
+        )
+        assert found is False
+        assert "not found" in detail
+
+
+# ---------------------------------------------------------------------------
+# run_check — three-layer PASS
 # ---------------------------------------------------------------------------
 
 
@@ -170,6 +259,7 @@ class TestRunCheckPass:
         cfg = _write_openclaw_config(
             cfg_dir,
             [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            global_models=_all_test_global_models(),
         )
         _all_agents_models_json(agents_dir)
         assert run_check(cfg, agents_dir, c8=False) == 0
@@ -181,7 +271,7 @@ class TestRunCheckPass:
         entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
         entries.append(_agent_entry("github-agent", "openai-codex/gpt-5.4-mini"))
         entries.append(_agent_entry("pm", "claude-cli/claude-sonnet-4-6"))
-        cfg = _write_openclaw_config(cfg_dir, entries)
+        cfg = _write_openclaw_config(cfg_dir, entries, global_models=_all_test_global_models())
         _all_agents_models_json(agents_dir)
         assert run_check(cfg, agents_dir, c8=False) == 0
 
@@ -201,7 +291,12 @@ class TestRunCheckLayer1Fail:
             for a in ELIS_PLATFORM_AGENTS
             if a != "infra-val-b"
         ]
-        cfg = _write_openclaw_config(cfg_dir, entries)
+        present_models = {
+            f"openrouter/test/{a}-model": {}
+            for a in ELIS_PLATFORM_AGENTS
+            if a != "infra-val-b"
+        }
+        cfg = _write_openclaw_config(cfg_dir, entries, global_models=present_models)
         _all_agents_models_json(agents_dir)
         assert run_check(cfg, agents_dir, c8=False) == 1
 
@@ -214,7 +309,12 @@ class TestRunCheckLayer1Fail:
             e if e["id"] != "infra-impl-b" else {"id": "infra-impl-b"}
             for e in entries
         ]
-        cfg = _write_openclaw_config(cfg_dir, entries)
+        present_models = {
+            f"openrouter/test/{a}-model": {}
+            for a in ELIS_PLATFORM_AGENTS
+            if a != "infra-impl-b"
+        }
+        cfg = _write_openclaw_config(cfg_dir, entries, global_models=present_models)
         _all_agents_models_json(agents_dir)
         assert run_check(cfg, agents_dir, c8=False) == 1
 
@@ -228,7 +328,36 @@ class TestRunCheckLayer1Fail:
 
 
 # ---------------------------------------------------------------------------
-# run_check — Layer 2 failures (per-agent models.json)
+# run_check — Layer 2 failures (global model allowlist)
+# ---------------------------------------------------------------------------
+
+
+class TestRunCheckLayer2GlobalAllowlistFail:
+    def test_l2_fail_when_model_absent_from_allowlist(self, tmp_path):
+        cfg_dir = tmp_path / "cfg"
+        agents_dir = tmp_path / "agents"
+        cfg_dir.mkdir()
+        entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+        # Global allowlist contains a different model — agents' test models are absent
+        cfg = _write_openclaw_config(
+            cfg_dir, entries, global_models={"openrouter/other/model": {}}
+        )
+        _all_agents_models_json(agents_dir)
+        assert run_check(cfg, agents_dir, c8=False) == 1
+
+    def test_l2_fail_when_agents_defaults_models_missing(self, tmp_path):
+        cfg_dir = tmp_path / "cfg"
+        agents_dir = tmp_path / "agents"
+        cfg_dir.mkdir()
+        entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+        # No global_models → agents.defaults.models key absent → KeyError → exit 1
+        cfg = _write_openclaw_config(cfg_dir, entries)
+        _all_agents_models_json(agents_dir)
+        assert run_check(cfg, agents_dir, c8=False) == 1
+
+
+# ---------------------------------------------------------------------------
+# run_check — Layer 3 failures (per-agent models.json)
 # ---------------------------------------------------------------------------
 
 
@@ -240,6 +369,7 @@ class TestRunCheckLayer2Fail:
         cfg = _write_openclaw_config(
             cfg_dir,
             [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            global_models=_all_test_global_models(),
         )
         # Write models.json for all except infra-val-b
         for a in ELIS_PLATFORM_AGENTS:
@@ -254,6 +384,7 @@ class TestRunCheckLayer2Fail:
         cfg = _write_openclaw_config(
             cfg_dir,
             [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            global_models=_all_test_global_models(),
         )
         _all_agents_models_json(agents_dir)
         # Corrupt one
@@ -268,6 +399,7 @@ class TestRunCheckLayer2Fail:
         cfg = _write_openclaw_config(
             cfg_dir,
             [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            global_models=_all_test_global_models(),
         )
         _all_agents_models_json(agents_dir)
         # Override infra-val-a with wrong model in models.json
@@ -281,6 +413,7 @@ class TestRunCheckLayer2Fail:
         cfg = _write_openclaw_config(
             cfg_dir,
             [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS],
+            global_models=_all_test_global_models(),
         )
         # Write models.json for all but leave prog-impl-b directory absent
         for a in ELIS_PLATFORM_AGENTS:
@@ -330,10 +463,14 @@ class TestC8Advisory:
         agents_dir = tmp_path / "agents"
         cfg_dir.mkdir()
         entries = [_agent_entry(a, "unknown-provider/some-model") for a in ELIS_PLATFORM_AGENTS]
-        cfg = _write_openclaw_config(cfg_dir, entries)
+        cfg = _write_openclaw_config(
+            cfg_dir,
+            entries,
+            global_models={"unknown-provider/some-model": {}},
+        )
         for a in ELIS_PLATFORM_AGENTS:
             _write_agent_models_json(agents_dir, a, ["unknown-provider/some-model"])
-        # C8 warning does not change exit code — still 0 (both layers pass)
+        # C8 warning does not change exit code — still 0 (all three layers pass)
         assert run_check(cfg, agents_dir, c8=True) == 0
 
 

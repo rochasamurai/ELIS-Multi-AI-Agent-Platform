@@ -369,3 +369,16 @@ exception recorded in the opening Status Packet of the affected PE gate. Excepti
 Implementer and Validator for any PE gate must run on different AI models. If both sessions
 inherit the same caller model, the resilience requirement is not met. The `model` parameter
 in `sessions_spawn` is the mechanism that enforces this.
+
+## Three-Layer Model Registry Check
+
+OpenClaw model execution requires consistency across three layers:
+
+| Layer | Source | Check |
+|---|---|---|
+| L1 | `openclaw.json` → `agents.list[].model` | Agent has non-empty configured model |
+| L2 | `openclaw.json` → `agents.defaults.models` | Configured model appears in global allowlist (exact or provider wildcard) |
+| L3 | `/home/samurai/.openclaw/agents/<agentId>/agent/models.json` | Configured model registered in per-agent catalogue |
+
+All three layers must pass for an agent to be considered model-registry compliant.
+`scripts/check_agent_model_registry.py --check` validates all three layers.

@@ -208,3 +208,25 @@ Hard stops (corrective pass):
 - Do not dispatch validation
 - Do not create .enabled
 - Do not create PR
+
+---
+
+## Gate 2A-model-fix global allowlist correction pass scope (approved addition)
+
+Approved after Validator Gate 2A review identified missing global allowlist layer (2026-05-31).
+
+Corrective changes:
+- `scripts/check_agent_model_registry.py`: add `load_global_model_allowlist()`, `check_model_in_global_allowlist()`; update `run_check()` to three layers (L1: openclaw.json model, L2: agents.defaults.models global allowlist, L3: per-agent models.json); update module docstring
+- `tests/test_check_agent_model_registry.py`: add TestLoadGlobalModelAllowlist, TestCheckModelInGlobalAllowlist, TestRunCheckLayer2GlobalAllowlistFail; update existing run_check fixtures to include agents.defaults.models
+- `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md`: append Three-Layer Model Registry Check table
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-02/HANDOFF.md`: append this correction pass entry
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-02/PE_TASK.md`: this addition
+
+Hard stops (global allowlist correction pass):
+- Do not edit any models.json file
+- Do not edit OpenClaw/Hermes config
+- Do not restart services
+- Do not dispatch validation
+- Do not create .enabled
+- Do not create PR
+- Do not modify Gate 2A A2A runtime code (scripts/a2a_local_transport.py, tests/test_a2a_local_transport.py)
