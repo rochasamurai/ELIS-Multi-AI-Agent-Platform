@@ -19,6 +19,7 @@ from check_agent_model_registry import (
     load_agent_models,
     load_global_model_allowlist,
     run_check,
+    sync_agent_catalogue,
 )
 
 
@@ -502,3 +503,147 @@ class TestAgentScope:
     def test_prog_agents_in_scope(self):
         for a in ["prog-impl-a", "prog-impl-b", "prog-val-a", "prog-val-b"]:
             assert a in ELIS_PLATFORM_AGENTS
+
+
+# ---------------------------------------------------------------------------
+# --sync-agent-catalogue mode
+# ---------------------------------------------------------------------------
+
+
+def _full_fixture(
+    tmp_path: Path,
+    agent_id: str = "infra-val-b",
+    model: str = "openrouter/z-ai/glm-5.1",
+    include_model_in_catalog: bool = False,
+):
+    """Build a self-contained fixture: openclaw.json + all agents' models.json."""
+    cfg_dir = tmp_path / "cfg"
+    agents_dir = tmp_path / "agents"
+    cfg_dir.mkdir()
+
+    entries = [_agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS]
+    # Override the target agent's model
+    entries = [e if e["id"] != agent_id else _agent_entry(agent_id, model) for e in entries]
+
+    global_models = {f"openrouter/test/{a}-model": {} for a in ELIS_PLATFORM_AGENTS}
+    global_models[model] = {}
+
+    cfg = _write_openclaw_config(cfg_dir, entries, global_models=global_models)
+
+    for a in ELIS_PLATFORM_AGENTS:
+        if a == agent_id:
+            # Write minimal models.json without the target model (L3 gap)
+            agent_dir = agents_dir / a / "agent"
+            agent_dir.mkdir(parents=True, exist_ok=True)
+            existing_ids = [model] if include_model_in_catalog else ["openrouter/other/old"]
+            data = {
+                "providers": {
+                    "openrouter": {
+                        "baseUrl": "https://openrouter.ai/v1",
+                        "models": [{"id": mid, "name": mid} for mid in existing_ids],
+                    }
+                }
+            }
+            (agent_dir / "models.json").write_text(json.dumps(data), encoding="utf-8")
+        else:
+            _write_agent_models_json(agents_dir, a, [f"openrouter/test/{a}-model"])
+
+    return cfg, agents_dir
+
+
+class TestSyncAgentCatalogue:
+    def test_requires_approve_flag(self, monkeypatch, capsys):
+        import check_agent_model_registry as mod
+        monkeypatch.setattr(sys, "argv", [
+            "check_agent_model_registry.py",
+            "--sync-agent-catalogue",
+            "--agent", "infra-val-b",
+        ])
+        with pytest.raises(SystemExit) as exc_info:
+            mod.main()
+        assert exc_info.value.code == 2
+        assert "--approve" in capsys.readouterr().out
+
+    def test_requires_agent_flag(self, monkeypatch, capsys):
+        import check_agent_model_registry as mod
+        monkeypatch.setattr(sys, "argv", [
+            "check_agent_model_registry.py",
+            "--sync-agent-catalogue",
+            "--approve",
+        ])
+        with pytest.raises(SystemExit) as exc_info:
+            mod.main()
+        assert exc_info.value.code == 2
+        assert "--agent" in capsys.readouterr().out
+
+    def test_creates_backup(self, tmp_path):
+        cfg, agents_dir = _full_fixture(tmp_path, agent_id="infra-val-b")
+        mjs_path = agents_dir / "infra-val-b" / "agent" / "models.json"
+        result = sync_agent_catalogue("infra-val-b", cfg, agents_dir)
+        assert result == 0
+        backups = list(mjs_path.parent.glob("models.json.bak.*"))
+        assert len(backups) == 1
+
+    def test_adds_model_to_existing_provider(self, tmp_path):
+        model = "openrouter/z-ai/glm-5.1"
+        cfg, agents_dir = _full_fixture(tmp_path, agent_id="infra-val-b", model=model)
+        result = sync_agent_catalogue("infra-val-b", cfg, agents_dir)
+        assert result == 0
+        mjs_path = agents_dir / "infra-val-b" / "agent" / "models.json"
+        data = json.loads(mjs_path.read_text(encoding="utf-8"))
+        ids = [e["id"] for e in data["providers"]["openrouter"]["models"]]
+        assert model in ids
+
+    def test_skips_duplicate(self, tmp_path, capsys):
+        model = "openrouter/z-ai/glm-5.1"
+        cfg, agents_dir = _full_fixture(
+            tmp_path, agent_id="infra-val-b", model=model, include_model_in_catalog=True
+        )
+        mjs_path = agents_dir / "infra-val-b" / "agent" / "models.json"
+        content_before = mjs_path.read_text(encoding="utf-8")
+        result = sync_agent_catalogue("infra-val-b", cfg, agents_dir)
+        assert result == 0
+        assert mjs_path.read_text(encoding="utf-8") == content_before
+        assert "already present" in capsys.readouterr().out
+
+    def test_validates_written_json(self, tmp_path):
+        cfg, agents_dir = _full_fixture(tmp_path, agent_id="infra-val-b")
+        result = sync_agent_catalogue("infra-val-b", cfg, agents_dir)
+        assert result == 0
+        mjs_path = agents_dir / "infra-val-b" / "agent" / "models.json"
+        # Must be valid JSON (no JSONDecodeError)
+        parsed = json.loads(mjs_path.read_text(encoding="utf-8"))
+        assert "providers" in parsed
+
+    def test_check_mode_unaffected(self, tmp_path):
+        """--check still exits 0 after a successful sync (fixture config)."""
+        cfg, agents_dir = _full_fixture(tmp_path)
+        # Sync first
+        sync_agent_catalogue("infra-val-b", cfg, agents_dir)
+        # All agents in fixture have correct models; run_check must pass
+        assert run_check(cfg, agents_dir, c8=False) == 0
+
+    def test_check_mode_still_readonly(self, monkeypatch, capsys):
+        """--check must not create any backup files."""
+        import check_agent_model_registry as mod
+        import tempfile, os
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            cfg_dir = td_path / "cfg"
+            agents_dir = td_path / "agents"
+            cfg_dir.mkdir()
+            entries = [
+                _agent_entry(a, f"openrouter/test/{a}-model") for a in ELIS_PLATFORM_AGENTS
+            ]
+            cfg = _write_openclaw_config(cfg_dir, entries, global_models=_all_test_global_models())
+            _all_agents_models_json(agents_dir)
+            monkeypatch.setattr(sys, "argv", [
+                "check_agent_model_registry.py",
+                "--check",
+                "--config", str(cfg),
+                "--agents-root", str(agents_dir),
+            ])
+            mod.main()
+            # Confirm no backup files created anywhere under agents_dir
+            backups = list(agents_dir.rglob("models.json.bak.*"))
+            assert backups == []

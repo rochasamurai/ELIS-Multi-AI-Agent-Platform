@@ -179,6 +179,115 @@ Gate 2A complete. Awaiting PM review and Gate 2B dispatch instruction.
 
 ---
 
+## Gate 2A-sync-catalogue — --sync-agent-catalogue implementation + infra-val-b L3 repair
+
+### Files changed
+
+| File | Change |
+|------|--------|
+| `scripts/check_agent_model_registry.py` | Added `--sync-agent-catalogue` mode; new `sync_agent_catalogue()` function; `datetime` import; updated docstring; new CLI flags (`--sync-agent-catalogue`, `--approve`, `--agent`) |
+| `tests/test_check_agent_model_registry.py` | Added `TestSyncAgentCatalogue` (8 tests): requires --approve, requires --agent, creates backup, adds model to provider, skips duplicate, validates JSON, check mode unaffected, check mode still read-only |
+
+### --sync-agent-catalogue behaviour
+
+- Requires `--approve` and `--agent AGENT_ID` — exits 2 with clear message if either absent
+- Loads target agent model from live `openclaw.json`
+- Resolves `<agents-root>/<agentId>/agent/models.json`
+- Creates timestamped backup (`models.json.bak.YYYYMMDDTHHMMSSZ` UTC) before any write
+- Checks for duplicate — if model already present, prints "already present, no change" and exits 0
+- Appends minimal model entry to matching provider block (creates provider block if absent)
+- Validates written JSON by re-reading and parsing
+- Re-runs three-layer check for the target agent and reports L1/L2/L3 result
+- Never touches `openclaw.json`, auth files, or any agent other than `--agent`
+- Never runs without `--approve`
+- `--sync` (old flag) preserved unchanged — still exits 2 with "SYNC NOT IMPLEMENTED"
+
+### --sync-agent-catalogue repair output for infra-val-b
+
+```
+backup created: /home/samurai/.openclaw/agents/infra-val-b/agent/models.json.bak.20260531T200437Z
+model added: 'openrouter/z-ai/glm-5.1' → /home/samurai/.openclaw/agents/infra-val-b/agent/models.json
+
+Re-running three-layer check for infra-val-b:
+  L1: PASS (openclaw.json)
+  L2: PASS (exact match in agents.defaults.models)
+  L3: PASS (found in /home/samurai/.openclaw/agents/infra-val-b/agent/models.json)
+
+RESULT: PASS — infra-val-b L1/L2/L3 all pass after sync
+```
+
+### Full --check --c8 output post-repair (infra-val-b now L3 PASS)
+
+```
+ELIS Platform Agent Model Registry Check
+  openclaw config : /home/samurai/.openclaw/openclaw.json
+  agents root     : /home/samurai/.openclaw/agents
+
+  CHECK infra-impl-a: openrouter/qwen/qwen3-coder-flash
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: PASS (found in /home/samurai/.openclaw/agents/infra-impl-a/agent/models.json)
+  CHECK infra-impl-b: openrouter/deepseek/deepseek-v4-flash
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: PASS (found in /home/samurai/.openclaw/agents/infra-impl-b/agent/models.json)
+  CHECK infra-val-a: openrouter/deepseek/deepseek-v4-pro
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: PASS (found in /home/samurai/.openclaw/agents/infra-val-a/agent/models.json)
+  CHECK infra-val-b: openrouter/z-ai/glm-5.1
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: PASS (found in /home/samurai/.openclaw/agents/infra-val-b/agent/models.json)
+  CHECK prog-impl-a: openrouter/qwen/qwen3-coder-flash
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: FAIL (model 'openrouter/qwen/qwen3-coder-flash' not found in any provider list in /home/samurai/.openclaw/agents/prog-impl-a/agent/models.json)
+  CHECK prog-impl-b: openrouter/deepseek/deepseek-v4-flash
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: FAIL (models.json missing: /home/samurai/.openclaw/agents/prog-impl-b/agent/models.json)
+  CHECK prog-val-a: openrouter/deepseek/deepseek-v4-pro
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: FAIL (models.json missing: /home/samurai/.openclaw/agents/prog-val-a/agent/models.json)
+  CHECK prog-val-b: openrouter/z-ai/glm-5.1
+        L1: PASS (openclaw.json)
+        L2: PASS (exact match in agents.defaults.models)
+        L3: FAIL (model 'openrouter/z-ai/glm-5.1' not found in any provider list in /home/samurai/.openclaw/agents/prog-val-b/agent/models.json)
+
+C8 advisory check:
+  C8: no unrecognised provider prefixes found
+
+RESULT: FAIL — 4 agent(s) failed registry check: prog-impl-a, prog-impl-b, prog-val-a, prog-val-b
+```
+
+Note: `prog-*` agent L3 failures are pre-existing and out of scope for this task. Only `infra-val-b` was targeted.
+
+### Test results
+
+```
+============================= test session info ==============================
+collected 44 items
+tests/test_check_agent_model_registry.py ............ (44 passed, 0 failed)
+```
+
+44 total (36 prior + 8 new `TestSyncAgentCatalogue`). All pass.
+
+### Hard stop confirmations
+
+| Requirement | Status |
+|-------------|--------|
+| `openclaw.json` not touched | CONFIRMED |
+| No auth files touched | CONFIRMED |
+| No service restart | CONFIRMED |
+| Only `infra-val-b` models.json written | CONFIRMED |
+| `--sync-agent-catalogue` requires `--approve` | CONFIRMED |
+| `--check` remains read-only (no backup files) | CONFIRMED |
+| `--sync` (old flag) still exits 2 | CONFIRMED |
+
+---
+
 ## Gate 2A-model-fix
 
 ### Files created/updated

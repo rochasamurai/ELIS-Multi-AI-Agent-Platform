@@ -230,3 +230,35 @@ Hard stops (global allowlist correction pass):
 - Do not create .enabled
 - Do not create PR
 - Do not modify Gate 2A A2A runtime code (scripts/a2a_local_transport.py, tests/test_a2a_local_transport.py)
+
+---
+
+## Gate 2A-sync-catalogue scope block
+
+### Task
+
+Add `--sync-agent-catalogue` mode to `scripts/check_agent_model_registry.py` and use it to
+repair `infra-val-b` L3 (missing `openrouter/z-ai/glm-5.1` entry in per-agent `models.json`).
+
+### Files in scope
+
+- `scripts/check_agent_model_registry.py` — add `--sync-agent-catalogue` mode
+- `tests/test_check_agent_model_registry.py` — add `TestSyncAgentCatalogue` (8 tests)
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-02/HANDOFF.md` — evidence
+- `.elis/pe/PE-OPS-A2A-PRODUCTION-02/PE_TASK.md` — this file
+
+### Live mutation
+
+Only `infra-val-b` `/home/samurai/.openclaw/agents/infra-val-b/agent/models.json` was written.
+Backup: `models.json.bak.20260531T200437Z`.
+`openclaw.json` was never touched.
+
+### Hard stops
+
+- Do not touch openclaw.json
+- Do not touch auth files
+- Do not restart services
+- Do not create .enabled
+- Do not create PR
+- Do not push
+- Only infra-val-b modified by --sync-agent-catalogue
