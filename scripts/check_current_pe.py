@@ -201,8 +201,136 @@ def _validate_engines(current: dict[str, str]) -> tuple[str, str]:
     return impl_engine, val_engine
 
 
+_WAIVER_REQUIRED_CLASSIFICATION = "OPS_AGENT_ALTERNATION_RULE_VIOLATION_AT_PE_OPENING"
+_WAIVER_REQUIRED_STATUS = "GRANTED"
+_WAIVER_REQUIRED_ONE_TIME_PHRASES = ("one-time, this pe only", "scope: one-time")
+_WAIVER_REQUIRED_RULE_UNCHANGED_PHRASES = (
+    "does not change the alternation rule globally",
+    "not change the alternation rule globally",
+)
+_WAIVER_REQUIRED_PO_APPROVAL_PHRASES = ("approved by:",)
+
+
+def _load_alternation_waiver(pe_id: str, current_pe_path: Path) -> dict[str, str] | None:
+    """Load and parse a PE-local alternation waiver file.
+
+    Returns a dict of parsed fields, or None if no waiver file exists.
+    Raises ValueError if the waiver file is present but malformed.
+    """
+    waiver_path = current_pe_path.parent / ".elis" / "pe" / pe_id / "ALTERNATION_WAIVER.md"
+    if not waiver_path.exists():
+        return None
+
+    # Enforce: waiver must be inside .elis/pe/<PE_ID>/ relative to the repo root.
+    try:
+        waiver_path.relative_to(current_pe_path.parent / ".elis" / "pe" / pe_id)
+    except ValueError:
+        raise ValueError(
+            f"Alternation waiver file is outside the required PE directory "
+            f"'.elis/pe/{pe_id}/': '{waiver_path}'."
+        )
+
+    text = waiver_path.read_text(encoding="utf-8")
+    # Strip markdown bold/italic markers before phrase matching
+    plain = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
+    lower = plain.lower()
+
+    def _extract(pattern: str) -> str | None:
+        m = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+        return m.group(1).strip() if m else None
+
+    # PE ID from heading: # ALTERNATION WAIVER — <PE_ID>
+    heading_pe = _extract(r"^#\s+ALTERNATION WAIVER\s+[—-]+\s+(\S+)", )
+    # Classification
+    classification = _extract(r"Classification:\s*(\S+)")
+    # Waiver status (must start with GRANTED)
+    waiver_status_raw = _extract(r"Waiver status:\s*(\S+)")
+    # Actual implementer — strip backticks
+    actual_impl = _extract(r"Actual implementer\s*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])")
+    # Expected implementer
+    expected_impl = _extract(r"Expected implementer[^|]*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])")
+    # Validator
+    validator = _extract(r"Validator\s*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])")
+
+    # Check one-time scope
+    has_one_time = any(phrase in lower for phrase in _WAIVER_REQUIRED_ONE_TIME_PHRASES)
+    # Check global rule unchanged statement
+    has_rule_unchanged = any(phrase in lower for phrase in _WAIVER_REQUIRED_RULE_UNCHANGED_PHRASES)
+    # Check PO approval recorded
+    has_po_approval = any(phrase in lower for phrase in _WAIVER_REQUIRED_PO_APPROVAL_PHRASES)
+
+    return {
+        "heading_pe": heading_pe or "",
+        "classification": classification or "",
+        "waiver_status": waiver_status_raw or "",
+        "actual_implementer": actual_impl or "",
+        "expected_implementer": expected_impl or "",
+        "validator": validator or "",
+        "has_one_time_scope": has_one_time,
+        "has_rule_unchanged": has_rule_unchanged,
+        "has_po_approval": has_po_approval,
+    }
+
+
+def _validate_waiver_fields(
+    waiver: dict[str, str],
+    pe_id: str,
+    current: dict[str, str],
+) -> None:
+    """Validate all required waiver fields match the active PE. Raises ValueError on mismatch."""
+    errors: list[str] = []
+
+    if waiver["heading_pe"] != pe_id:
+        errors.append(
+            f"Waiver PE ID '{waiver['heading_pe']}' does not match active PE '{pe_id}'."
+        )
+    if waiver["classification"] != _WAIVER_REQUIRED_CLASSIFICATION:
+        errors.append(
+            f"Waiver classification '{waiver['classification']}' is not "
+            f"'{_WAIVER_REQUIRED_CLASSIFICATION}'."
+        )
+    if not waiver["waiver_status"].startswith(_WAIVER_REQUIRED_STATUS):
+        errors.append(
+            f"Waiver status '{waiver['waiver_status']}' is not '{_WAIVER_REQUIRED_STATUS}'."
+        )
+    impl_id = current.get("implementer-agentid", "")
+    if waiver["actual_implementer"] != impl_id:
+        errors.append(
+            f"Waiver actual implementer '{waiver['actual_implementer']}' "
+            f"does not match registry implementer '{impl_id}'."
+        )
+    val_id = current.get("validator-agentid", "")
+    if waiver["validator"] != val_id:
+        errors.append(
+            f"Waiver validator '{waiver['validator']}' "
+            f"does not match registry validator '{val_id}'."
+        )
+    # expected implementer must differ from actual
+    if waiver["expected_implementer"] == impl_id:
+        errors.append(
+            f"Waiver expected implementer '{waiver['expected_implementer']}' "
+            "must differ from actual implementer."
+        )
+    if not waiver["has_one_time_scope"]:
+        errors.append("Waiver does not contain required one-time scope statement.")
+    if not waiver["has_rule_unchanged"]:
+        errors.append(
+            "Waiver does not contain required statement that alternation rule is not changed globally."
+        )
+    if not waiver["has_po_approval"]:
+        errors.append("Waiver does not contain required PO approval record.")
+
+    if errors:
+        raise ValueError(
+            "Alternation waiver fields invalid: " + "; ".join(errors)
+        )
+
+
 def _validate_alternation(
-    current: dict[str, str], rows: list[dict[str, str]], impl_engine: str
+    current: dict[str, str],
+    rows: list[dict[str, str]],
+    impl_engine: str,
+    current_pe_path: Path | None = None,
 ) -> None:
     domain = current["domain"].strip().lower()
     merged_same_domain = [
@@ -220,11 +348,34 @@ def _validate_alternation(
             "Previous merged implementer has no valid engine: "
             f"'{merged_same_domain[-1]['implementer-agentid']}'."
         )
-    if previous_engine == impl_engine:
+    if previous_engine != impl_engine:
+        return  # alternation valid — no waiver needed
+
+    # Alternation violated — check for a valid PE-local waiver.
+    pe_id = current.get("pe-id", "")
+    if not pe_id:
         raise ValueError(
             "Alternation rule violated: current implementer engine matches "
             "the last merged PE in the same domain."
         )
+
+    resolve_base = current_pe_path if current_pe_path is not None else Path("CURRENT_PE.md")
+    waiver = _load_alternation_waiver(pe_id, resolve_base)
+    if waiver is None:
+        raise ValueError(
+            "Alternation rule violated: current implementer engine matches "
+            "the last merged PE in the same domain. "
+            "No PE-local alternation waiver found."
+        )
+
+    _validate_waiver_fields(waiver, pe_id, current)
+    print(
+        f"WARNING: Alternation rule waiver accepted for {pe_id} "
+        f"(classification: {waiver['classification']}, "
+        f"actual implementer: {waiver['actual_implementer']}, "
+        f"waiver status: {waiver['waiver_status']}). "
+        "The general alternation rule is not changed."
+    )
 
 
 def _validate_roles_table(
@@ -417,7 +568,7 @@ def main() -> int:
         current = _current_registry_row(pe, branch, rows)
         _validate_status_and_date(current)
         impl_engine, val_engine = _validate_engines(current)
-        _validate_alternation(current, rows, impl_engine)
+        _validate_alternation(current, rows, impl_engine, current_pe_path=path)
         _validate_roles_table(
             roles,
             impl_engine,
