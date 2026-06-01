@@ -104,6 +104,16 @@ The earlier reconciliation (file `mtime` 2026-05-31 23:40:40) explained the main
 
 ---
 
+## Alternation Waiver
+
+- **Classification:** `OPS_AGENT_ALTERNATION_RULE_VIOLATION_AT_PE_OPENING`
+- **Waiver status:** GRANTED (PO, 2026-06-01)
+- **Waiver artefact:** `.elis/pe/PE-OPS-OPENCLAW-CLI-PATH-01/ALTERNATION_WAIVER.md`
+- **Summary:** infra-impl-b (claude) was assigned as implementer; alternation rule required infra-impl-a (codex). PO granted a one-time waiver — see waiver artefact for full rationale.
+- **check_current_pe.py status:** `CURRENT_PE_CHECK_NO_WAIVER_MECHANISM` — `_validate_alternation()` has no approved bypass path; waiver is a transparency record only.
+
+---
+
 ## Validator Instructions
 
 **Validator (infra-val-a):** verify the post-fix environment as per acceptance criteria. Write `REVIEW_PE-OPS-OPENCLAW-CLI-PATH-01.md` with a `### Evidence` section (required) and `### Verdict` line. Do not mutate any host/systemd files.
