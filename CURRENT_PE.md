@@ -21,15 +21,14 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | PE-OPS-OPENCLAW-CLI-PATH-01 |
-| Branch  | feature/pe-ops-openclaw-cli-path-01-fix-openclaw-binary-path-resolution |
+| PE      | — |
+| Branch  | — |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| infra-impl-b | Implementer |
-| infra-val-a  | Validator   |
+| — | — |
 
 
 ---
@@ -48,7 +47,7 @@
 | PE-GOV-RISK-TIER-01 | governance | infra-impl-a         | infra-val-b        | feature/pe-gov-risk-tier-01-add-risk-tiered-pe-protocol | blocked         | 2026-05-06   |
 | PE-OPS-FIXED-WORKSPACES-01 | fixed-workspaces | infra-impl-b | infra-val-a | feature/pe-ops-fixed-workspaces-01-adopt-fixed-agent-workspace-and-github-write-boundary-model | merged | 2026-05-07 |
 | PE-OPS-A2A-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-a2a-01-phase-1-communication-matrix-clean-opening | merged | 2026-05-17 |
-| PE-OPS-OPENCLAW-CLI-PATH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-openclaw-cli-path-01-fix-openclaw-binary-path-resolution | gate-2-pending | 2026-06-01 |
+| PE-OPS-OPENCLAW-CLI-PATH-01 | ops | infra-impl-b | infra-val-a | feature/pe-ops-openclaw-cli-path-01-fix-openclaw-binary-path-resolution | merged | 2026-06-01 |
 | PE-OPS-A2A-PRODUCTION-02 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-production-02-productionise-a2a-dispatch-provenance-controls | merged | 2026-05-31 |
 | PE-OPS-A2A-PRODUCTION-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production | CONTAMINATED / SUPERSEDED | 2026-05-29 |
 | PE-OPS-GITHUB-01 | github          | infra-impl-a         | infra-val-b        | feature/pe-ops-github-01-elis-github-agent-role-and-permission-model | merged          | 2026-05-06   |
@@ -281,6 +280,8 @@ PM housekeeping entries (prefix `PM-CHORE-XX`):
 | PM-CHORE-106 | Closed PE-OPS-GITHUB-AGENT-PRODUCTION-02 as merged. PR #460 (`test: ELIS GitHub write-path production test`) merged by `app/elis-github`, merge SHA `6b15fb0ba09e5955b0444e0a5a360aaa9a5059f9`, 2026-05-28. ELIS GitHub write-path production-ready. Plan-complete mode restored: PE and Branch cleared; no active PE; registry row updated to merged. Awaiting PM assignment of next PE. | 2026-05-28 |
 | PM-CHORE-107 | Opened PE-OPS-A2A-PRODUCTION-01 (Put A2A Internal Agent Communication into Production) with `infra-impl-a` as Implementer and `infra-val-b` as Validator per alternation rule (last merged ops PE in table order is PE-OPS-PO-ADVISOR-01 / infra-impl-b; CI-enforced). Lane: Strict. Corrected PE-OPS-A2A-RUNTIME-01 registry status from "merged on `origin/main`" to "merged" in same commit (bookkeeping fix; does not affect alternation due to table order). First-pass scope: read-only discovery + implementation plan only; no live config, no session mutation, no service restart, no A2A routing enablement. Implementer dispatch held — PM must issue explicit instruction. Branch: `feature/pe-ops-a2a-production-01-a2a-internal-agent-communication-production`. | 2026-05-28 |
 
+
+| PM-CHORE-108 | Closed PE-OPS-OPENCLAW-CLI-PATH-01 as merged (PR #468, infra-val-a V2 PASS; merge SHA `6efe7b27c6eb6c8c40cdf11eeeba5109f16d4280`, merged 2026-06-01T19:34:14Z via ELIS GitHub direct-agent path). Alternation waiver granted by PO (OPS_AGENT_ALTERNATION_RULE_VIOLATION_AT_PE_OPENING; one-time, infra-impl-b; next ops PE must use infra-impl-a). PE-local waiver mechanism added to `scripts/check_current_pe.py` (8 tests). PM merge routing rule added to `docs/openclaw/workspace-pm/AGENTS.md` §4.1 and `docs/governance/ELIS_GitHub_Agent_Operating_Model.md` v1.3. Plan-complete mode restored: PE and Branch cleared; no active PE. Follow-ups: GITHUB_PROJECT_BOARD_TOKEN_BAD_CREDENTIALS (infrastructure); PM alternation-check logic must scan full ops registry in table order (LESSONS_LEARNED.md). | 2026-06-01 |
 
 Alternation rule:
 - For consecutive PEs in the same domain, the implementer engine must alternate (`codex` <-> `claude`).
