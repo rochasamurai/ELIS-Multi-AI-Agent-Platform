@@ -61,8 +61,39 @@ During this PE, PM incorrectly concluded that no executable Supervisor agent was
 
 ---
 
+## Gate 2 (Supplementary) — Drop-in PATH Override Finding and Fix
+
+### Finding
+
+- **Path:** `~/.config/systemd/user/openclaw-gateway.service.d/10-path.conf`
+- **Effect:** drop-in contains `Environment=PATH=` without `/opt/openclaw/bin`; applied after main unit file, overriding the fix
+- **Classification:** `SYSTEMD_DROPIN_PATH_OVERRIDE_CAUSES_STALE_OPENCLAW_CLI`
+- Running gateway PID 141458 `PATH` (from `/proc/141458/environ`): did not contain `/opt/openclaw/bin`
+
+### Supervisor Fix
+
+- **Backup:** `~/.config/systemd/user/openclaw-gateway.service.d/10-path.conf.bak.20260601T171624`
+- **Edit:** prepended `/opt/openclaw/bin:/opt/openclaw/tools/node-v22.22.0/bin:` to `Environment=PATH=` in `10-path.conf`
+- **Commands:** `systemctl --user daemon-reload && systemctl --user restart openclaw-gateway.service`
+- **Result:** gateway active, PID 142663; running gateway `PATH` starts with `/opt/openclaw/bin`
+
+### Supervisor Verification
+
+- `which openclaw`: `/opt/openclaw/bin/openclaw`
+- `openclaw --version`: `OpenClaw 2026.5.27`
+- `openclaw agent --help | grep session-key`: `--session-key` present
+- **Gate 2 verdict:** PASS (PO confirmed)
+
+### Gate 1 vs Gate 2 Discrepancy — Complete Resolution
+
+The earlier reconciliation (file `mtime` 2026-05-31 23:40:40) explained the main service file edit ~18 min after Gate 1. The drop-in finding completes the picture: the drop-in was the definitive cause of the stale `PATH` in the running gateway. Both findings are consistent and non-contradictory.
+
+---
+
 ## Acceptance Criteria Checklist
 
+- [x] Drop-in `10-path.conf` `PATH` override identified: `SYSTEMD_DROPIN_PATH_OVERRIDE_CAUSES_STALE_OPENCLAW_CLI`
+- [x] Drop-in corrected by Supervisor; `daemon-reload + restart`; gateway `PATH` verified
 - [x] Root cause identified: `SYSTEMD_USER_UNIT_PATH_PRECEDENCE`
 - [x] Stale binary version confirmed: v2026.4.21 at `/opt/openclaw/tools/node-v22.22.0/bin/openclaw`
 - [x] Correct binary confirmed: v2026.5.27 at `/opt/openclaw/bin/openclaw`
