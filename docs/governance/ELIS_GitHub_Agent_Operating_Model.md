@@ -46,7 +46,9 @@ Performs independent review. Local git operations only (commit REVIEW file, adve
 Owns PE coordination, authorisation checkpoints, and fallback escalation. PM must **not** write to GitHub directly. All GitHub write operations (push, PR, labels, comments) must be executed by the GitHub Agent after explicit PM approval. PM coordinates and approves but does not operate GitHub write tools.
 
 ### 4.4 GitHub Agent (Dedicated Bot)
-A permanent ELIS role with PE-scoped activation for write-capable GitHub operations: push, PR lifecycle, labels, comments, review requests, check reporting. Does not independently approve scope, validation, or merge.
+A permanent ELIS role with PE-scoped activation for write-capable GitHub operations: push, PR lifecycle, PR merge (when PO-approved), labels, comments, review requests, check reporting. Does not independently approve scope, validation, or merge — all merge operations require explicit PO approval before execution.
+
+**PR merge routing:** PM receives PO merge approval, then routes the merge request to ELIS GitHub. ELIS GitHub executes the merge using its authorised credential boundary (`app/elis-github` identity). PM must not execute GitHub Agent binaries locally or access GitHub Agent credential files. Supervisor is the escalation path for errors only.
 
 ### 4.5 Carlos / PO
 Final approval authority for merge, scope exceptions, and any escalation that changes repository state.
@@ -69,7 +71,7 @@ Final approval authority for merge, scope exceptions, and any escalation that ch
 | Local commit | ✅ Allowed | ✅ Allowed | ✅ Allowed | N/A | ❌ No | N/A |
 | git push (remote) | ❌ No | ❌ No | ❌ No | ✅ When authorised | ❌ No | ❌ (delegates) |
 | PR creation | ❌ No | ❌ No | ❌ No | ✅ When authorised | ❌ No | ❌ (delegates) |
-| PR merge | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No | ✅ PO approval |
+| PR merge | ❌ No | ❌ No | ❌ No | ✅ When PO-approved | ❌ No | ✅ PO approval |
 | PR comment | ❌ No | ✅ When authorised | ❌ No | ✅ When authorised | ❌ No | ✅ |
 | Formal GitHub review | ❌ No | ✅ When authorised | N/A | ❌ No | ❌ No | ✅ |
 | Label management | ❌ No | ❌ No | ❌ No | ✅ When authorised | ❌ No | ✅ |
@@ -84,6 +86,7 @@ All agents are bound to their fixed workspace path. Remote GitHub operations mus
 - local git commits in the fixed workspace (all execution roles)
 - branch push under explicit PM/PO approval (GitHub Agent only)
 - PR creation under explicit PM/PO approval (GitHub Agent only)
+- PR merge under explicit PO approval (GitHub Agent only — routed by PM)
 - checks reporting (GitHub Agent)
 - PR comments and review requests when explicitly authorised (Validator, GitHub Agent)
 - formal GitHub review when explicitly authorised (Validator)
@@ -92,7 +95,10 @@ All agents are bound to their fixed workspace path. Remote GitHub operations mus
 ### Forbidden
 - any git push, PR creation, or merge by implementer, validator, supervisor, or PM
 - PM writing to GitHub directly (PM coordinates and approves; GitHub Agent executes)
+- PM executing GitHub Agent binaries locally (e.g. `bin/gh-agent`) — PM must route to ELIS GitHub
+- PM accessing or referencing GitHub Agent credential files (e.g. `/opt/elis/secrets/github-agent.env`)
 - Supervisor writing to GitHub (read-only monitoring role)
+- Supervisor executing PR merges — Supervisor is escalation only, not the normal merge actor
 - direct merge without Carlos/PO approval (all roles)
 - unauthorised PR mutation (any role)
 - unauthorised label or comment actions (any role)
@@ -160,6 +166,7 @@ When automation fails:
 
 | Version | Date       | Author | Changes |
 |---------|------------|--------|---------|
+| 1.3     | 2026-06-01 | PM     | Clarify PR merge routing: GitHub Agent executes merges when PO-approved; PM must not execute `bin/gh-agent` locally or access credential files; Supervisor is escalation only. Update permission matrix PR merge row, §4.4, Allowed/Forbidden sections. |
 | 1.2     | 2026-05-07 | PM     | Add Supervisor role to permission matrix. Resolve PM GitHub write conflict: PM must not write to GitHub directly; only GitHub Agent may write after explicit PM/PO approval. Update Allowed/Forbidden sections. |
 | 1.1     | 2026-05-06 | PM     | Adopt fixed workspace model. Replace bot-centric model with role-based permission matrix. Clarify no-default-write principle. Gate 2 no longer auto-merges. |
 | 1.0     | 2026-05-03 | PM     | Initial GitHub Agent operating model. |

@@ -124,6 +124,26 @@ Check automatically when a `REVIEW_PE<N>.md` file is updated on a branch:
 
 If all three are true, approve merge and update PE status through `gate-2-pending` to `merged`.
 
+### 4.1 PR Merge Routing — ELIS GitHub Only (Mandatory)
+
+After PO merge approval, PM must route the merge request to ELIS GitHub to execute.
+
+**PM must:**
+- send the merge request to ELIS GitHub (the dedicated GitHub Agent role)
+- wait for ELIS GitHub to return the merge actor, method, merge SHA, and main HEAD
+
+**PM must not:**
+- execute GitHub Agent binaries locally (e.g. `bin/gh-agent`)
+- attempt to read, access, or reference GitHub Agent credential files (e.g. `/opt/elis/secrets/github-agent.env`)
+- treat Supervisor as the normal merge actor — Supervisor is escalation only, not the PR merge executor
+
+**Escalation path (exceptions only):**
+- if ELIS GitHub reports an error, credential fault, path issue, or runtime failure → escalate to Supervisor
+- Supervisor diagnoses and resolves; does not execute the merge directly
+- PO manual GitHub UI is the emergency fallback only after explicit PO approval
+
+This rule applies to all PR merges regardless of PE domain or role.
+
 ### Escalate Instead of Auto-Approving
 
 - third FAIL on the same PE
@@ -357,4 +377,4 @@ Discord has a 2000-character message limit. Violating it produces truncated or g
 
 ---
 
-*ELIS PM Agent · AGENTS.md · v2.2 · 2026-03-25*
+*ELIS PM Agent · AGENTS.md · v2.3 · 2026-06-01*
