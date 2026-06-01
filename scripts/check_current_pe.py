@@ -211,13 +211,17 @@ _WAIVER_REQUIRED_RULE_UNCHANGED_PHRASES = (
 _WAIVER_REQUIRED_PO_APPROVAL_PHRASES = ("approved by:",)
 
 
-def _load_alternation_waiver(pe_id: str, current_pe_path: Path) -> dict[str, str] | None:
+def _load_alternation_waiver(
+    pe_id: str, current_pe_path: Path
+) -> dict[str, str] | None:
     """Load and parse a PE-local alternation waiver file.
 
     Returns a dict of parsed fields, or None if no waiver file exists.
     Raises ValueError if the waiver file is present but malformed.
     """
-    waiver_path = current_pe_path.parent / ".elis" / "pe" / pe_id / "ALTERNATION_WAIVER.md"
+    waiver_path = (
+        current_pe_path.parent / ".elis" / "pe" / pe_id / "ALTERNATION_WAIVER.md"
+    )
     if not waiver_path.exists():
         return None
 
@@ -240,7 +244,9 @@ def _load_alternation_waiver(pe_id: str, current_pe_path: Path) -> dict[str, str
         return m.group(1).strip() if m else None
 
     # PE ID from heading: # ALTERNATION WAIVER — <PE_ID>
-    heading_pe = _extract(r"^#\s+ALTERNATION WAIVER\s+[—-]+\s+(\S+)", )
+    heading_pe = _extract(
+        r"^#\s+ALTERNATION WAIVER\s+[—-]+\s+(\S+)",
+    )
     # Classification
     classification = _extract(r"Classification:\s*(\S+)")
     # Waiver status (must start with GRANTED)
@@ -248,16 +254,22 @@ def _load_alternation_waiver(pe_id: str, current_pe_path: Path) -> dict[str, str
     # Actual implementer — strip backticks
     actual_impl = _extract(r"Actual implementer\s*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])")
     # Expected implementer
-    expected_impl = _extract(r"Expected implementer[^|]*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])")
+    expected_impl = _extract(
+        r"Expected implementer[^|]*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])"
+    )
     # Validator
     validator = _extract(r"Validator\s*\|?\s*[`']?([a-z][a-z0-9-]+[a-z0-9])")
 
     # Check one-time scope
     has_one_time = any(phrase in lower for phrase in _WAIVER_REQUIRED_ONE_TIME_PHRASES)
     # Check global rule unchanged statement
-    has_rule_unchanged = any(phrase in lower for phrase in _WAIVER_REQUIRED_RULE_UNCHANGED_PHRASES)
+    has_rule_unchanged = any(
+        phrase in lower for phrase in _WAIVER_REQUIRED_RULE_UNCHANGED_PHRASES
+    )
     # Check PO approval recorded
-    has_po_approval = any(phrase in lower for phrase in _WAIVER_REQUIRED_PO_APPROVAL_PHRASES)
+    has_po_approval = any(
+        phrase in lower for phrase in _WAIVER_REQUIRED_PO_APPROVAL_PHRASES
+    )
 
     return {
         "heading_pe": heading_pe or "",
@@ -321,9 +333,7 @@ def _validate_waiver_fields(
         errors.append("Waiver does not contain required PO approval record.")
 
     if errors:
-        raise ValueError(
-            "Alternation waiver fields invalid: " + "; ".join(errors)
-        )
+        raise ValueError("Alternation waiver fields invalid: " + "; ".join(errors))
 
 
 def _validate_alternation(
@@ -359,7 +369,9 @@ def _validate_alternation(
             "the last merged PE in the same domain."
         )
 
-    resolve_base = current_pe_path if current_pe_path is not None else Path("CURRENT_PE.md")
+    resolve_base = (
+        current_pe_path if current_pe_path is not None else Path("CURRENT_PE.md")
+    )
     waiver = _load_alternation_waiver(pe_id, resolve_base)
     if waiver is None:
         raise ValueError(

@@ -444,6 +444,8 @@ def test_waiver_fail_outside_pe_directory(tmp_path, monkeypatch):
     # Write waiver in a different PE's directory — the loader won't find it
     wrong_dir = tmp_path / ".elis" / "pe" / "PE-OPS-OTHER-01"
     wrong_dir.mkdir(parents=True, exist_ok=True)
-    (wrong_dir / "ALTERNATION_WAIVER.md").write_text(VALID_WAIVER_CONTENT, encoding="utf-8")
+    (wrong_dir / "ALTERNATION_WAIVER.md").write_text(
+        VALID_WAIVER_CONTENT, encoding="utf-8"
+    )
     monkeypatch.setenv("CURRENT_PE_PATH", str(path))
     assert MODULE.main() == 1
