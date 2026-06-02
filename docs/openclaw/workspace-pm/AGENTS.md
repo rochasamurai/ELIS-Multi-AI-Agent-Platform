@@ -153,6 +153,29 @@ Any other dispatch path requires explicit named PO approval before use.
 | `DISPATCH_CONFIRMED` | Acknowledgement verified; task may proceed |
 | `DISPATCH_BLOCKED` | No valid reset/binding acknowledgement or no authorised dispatch path |
 
+### 3.3 PM_TO_SUPERVISOR_RESET_PROHIBITED_RULE (Mandatory)
+
+PM must not send `/reset` to ELIS Supervisor.
+
+PM may send Supervisor an A2A message to process a request, diagnose a blocker, or invoke an
+authorised OpenClaw CLI direct-agent path. PM may not reset Supervisor, restart Supervisor,
+rebind Supervisor, or treat Supervisor as an implementer/validator target session.
+
+**Authorised PM→Supervisor A2A message types:**
+
+- `SUPERVISOR_DISPATCH_REQUEST_V1` — request Supervisor to invoke a named agent via OpenClaw CLI
+- `SUPERVISOR_DIAGNOSTIC_REQUEST_V1` — request Supervisor to diagnose a PE blocker or environment fault
+- `SUPERVISOR_EXCEPTION_REQUEST_V1` — escalate an exceptional condition requiring Supervisor arbitration
+- `SUPERVISOR_STATUS_REQUEST_V1` — request Supervisor's current operational status
+
+**Prohibited PM→Supervisor actions:**
+
+- `/reset` or any message whose primary effect is a Supervisor session reset
+- Any message that instructs Supervisor to rebind its own model, identity, or context
+- Using Supervisor as a relay to embed PE task instructions before the target agent's RESET_BINDING_ACK_V1
+
+Supervisor is not a PE implementer or validator target. Supervisor routes and diagnoses; it does not execute PE coding tasks.
+
 ---
 
 ## 4. Gate Management

@@ -499,3 +499,36 @@ PM must not use the following terms unless RESET_BINDING_ACK_V1 has been receive
 - Any PE gate recorded as started without a pasted RESET_BINDING_ACK_V1 in the Status Packet
   is a `PM_RAW_SESSIONS_SPAWN_FOR_PE_WORK_VIOLATION` regardless of subsequent output quality.
 - Supervisor monitors for rule compliance; escalates to PO on detection.
+
+---
+
+## PM_TO_SUPERVISOR_RESET_PROHIBITED_RULE
+
+PM must not send `/reset` to ELIS Supervisor.
+
+PM may send Supervisor an A2A message to process a request, diagnose a blocker, or invoke an
+authorised OpenClaw CLI direct-agent path. PM may not reset Supervisor, restart Supervisor,
+rebind Supervisor, or treat Supervisor as an implementer/validator target session.
+
+### Authorised PM→Supervisor A2A message types
+
+- `SUPERVISOR_DISPATCH_REQUEST_V1` — request Supervisor to invoke a named agent via OpenClaw CLI
+- `SUPERVISOR_DIAGNOSTIC_REQUEST_V1` — request Supervisor to diagnose a PE blocker or environment fault
+- `SUPERVISOR_EXCEPTION_REQUEST_V1` — escalate an exceptional condition requiring Supervisor arbitration
+- `SUPERVISOR_STATUS_REQUEST_V1` — request Supervisor's current operational status
+
+### Prohibited PM→Supervisor actions
+
+- `/reset` or any message whose primary effect is a Supervisor session reset
+- Any message that instructs Supervisor to rebind its own model, identity, or context
+- Using Supervisor as a relay to embed PE task instructions before the target agent's RESET_BINDING_ACK_V1
+
+### Violation classification
+
+- `PM_TO_SUPERVISOR_RESET_VIOLATION` — PM sent `/reset` or equivalent rebind instruction to Supervisor
+
+### Enforcement
+
+- PM AGENTS.md §3.3 contains the PM-side operational form of this rule.
+- Supervisor is not a PE implementer or validator target. It routes and diagnoses; it does not execute PE coding tasks.
+- PO is notified on detection.
