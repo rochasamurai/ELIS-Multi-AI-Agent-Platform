@@ -434,3 +434,68 @@ When PM invokes `openclaw agent --agent <id> --local` for GLM-native or direct v
   before accepting any work output from that session.
 - Token budget awareness: if a prior validation call consumed >50k input tokens, PM must
   assume session context is overloaded and request a reset before the next call.
+
+## RAW_SESSIONS_SPAWN_FOR_PE_WORK_PROHIBITED_RULE
+
+**Classification of violation:** PM_RAW_SESSIONS_SPAWN_FOR_PE_WORK_VIOLATION
+
+Raw `sessions_spawn` is not an authorised dispatch method for PE implementer or validator work.
+
+PM must not use raw `sessions_spawn` to start, re-start, retry, probe, validate, or continue any PE
+implementer or validator task. Tool availability is not authorisation.
+
+### Permitted dispatch paths (PE implementer/validator work only)
+
+1. Approved GitHub Actions workflow dispatch (`gh workflow run implementer-runner.yml`), where applicable.
+2. Supervisor-routed OpenClaw CLI direct-agent invocation.
+3. Future governed live dispatch wrapper, once implemented and PO-approved.
+
+Any other dispatch path requires explicit named PO approval before use.
+
+### Prohibited dispatch paths
+
+- Raw `sessions_spawn` with embedded task prompt (mode=run or mode=session)
+- Any OpenClaw session primitive that embeds the PE task before RESET_BINDING_ACK_V1 is received
+- Any path that does not produce a verifiable RESET_BINDING_ACK_V1 before PE work begins
+
+### Dispatch validity gate
+
+A PE implementer/validator dispatch is not valid until ALL of the following are received and verified:
+
+| Field | Requirement |
+|---|---|
+| RESET_BINDING_ACK_V1 | Received from the target agent session |
+| session key | Fresh; not reused from a prior PE |
+| worktree | Matches agent's assigned fixed worktree path |
+| branch | Matches the active PE branch in CURRENT_PE.md |
+| HEAD | Matches expected starting commit |
+| git status | Clean (`git status -sb` shows no modified or untracked files) |
+| git identity | Correct agent git author name and email |
+| configured model | From agent profile in live `~/.openclaw/openclaw.json` |
+| runtime provider/model | From `executionTrace.winnerProvider` / `agentMeta.model` |
+| token/messageCount baseline | Acceptable (not overloaded from prior session) |
+| authorised scope | Explicitly confirmed for this PE gate |
+
+### Prohibited PM status wording
+
+PM must not use the following terms unless RESET_BINDING_ACK_V1 has been received and all fields verified:
+
+- "session accepted"
+- "implementer dispatched"
+- "validator dispatched"
+
+### Required PM status wording
+
+| Status | Meaning |
+|---|---|
+| `DISPATCH_PENDING` | Invocation requested; no reset/binding acknowledgement yet |
+| `RESET_ACK_RECEIVED` | Acknowledgement received; not yet verified |
+| `DISPATCH_CONFIRMED` | Acknowledgement verified; task may proceed |
+| `DISPATCH_BLOCKED` | No valid reset/binding acknowledgement or no authorised dispatch path |
+
+### Enforcement
+
+- PM AGENTS.md §3.2 contains the PM-side operational form of this rule.
+- Any PE gate recorded as started without a pasted RESET_BINDING_ACK_V1 in the Status Packet
+  is a `PM_RAW_SESSIONS_SPAWN_FOR_PE_WORK_VIOLATION` regardless of subsequent output quality.
+- Supervisor monitors for rule compliance; escalates to PO on detection.

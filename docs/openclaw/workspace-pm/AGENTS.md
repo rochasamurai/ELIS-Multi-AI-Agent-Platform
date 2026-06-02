@@ -15,8 +15,9 @@ Use this order whenever sources appear to conflict:
 3. `MEMORY.md` — concise operational corrections that must survive session drift
 4. `~/openclaw/workspace-pm/CURRENT_PE.md` — current PE state, branch, and release metadata
 5. `~/openclaw/workspace-pm/docs/PLAN_CURRENT.md` — active release plan referenced by `CURRENT_PE.md`
+6. `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` — dispatch gate rules, reset/binding acknowledgement requirements, and model binding requirements
 
-No other helper file may override the five sources above.
+No other helper file may override the six sources above.
 
 ---
 
@@ -108,6 +109,49 @@ gh workflow run implementer-runner.yml \
 > Use agent IDs (`infra-impl-b`, `infra-val-a`, etc.) in all PE proposals and PM reports.
 
 PM must report the run URL (or run ID), branch evidence, and PR evidence to the PO.
+
+---
+
+### 3.2 RAW_SESSIONS_SPAWN_FOR_PE_WORK_PROHIBITED_RULE (Mandatory)
+
+Raw `sessions_spawn` is not an authorised dispatch method for PE implementer or validator work.
+
+PM must not use raw `sessions_spawn` to start, re-start, retry, probe, validate, or continue any PE implementer or validator task.
+
+Tool availability is not authorisation.
+
+**Permitted dispatch paths for PE implementer/validator work:**
+
+1. Approved GitHub Actions workflow dispatch (`gh workflow run implementer-runner.yml`), where applicable.
+2. Supervisor-routed OpenClaw CLI direct-agent invocation.
+3. Future governed live dispatch wrapper, once implemented and PO-approved.
+
+Any other dispatch path requires explicit named PO approval before use.
+
+**A PE implementer/validator dispatch is not valid until:**
+
+- `RESET_BINDING_ACK_V1` is received;
+- all required reset/binding fields are verified;
+- session key is fresh;
+- worktree, branch, and HEAD match the PE;
+- configured model and actual runtime provider/model are reported from `executionTrace`/`agentMeta`;
+- token/messageCount baseline is acceptable where available;
+- authorised scope is confirmed.
+
+**Prohibited PM status wording** (unless `RESET_BINDING_ACK_V1` has already been received and verified):
+
+- "session accepted"
+- "implementer dispatched"
+- "validator dispatched"
+
+**Required PM status wording:**
+
+| Status | Meaning |
+|---|---|
+| `DISPATCH_PENDING` | Invocation requested; no reset/binding acknowledgement yet |
+| `RESET_ACK_RECEIVED` | Acknowledgement received; not yet verified |
+| `DISPATCH_CONFIRMED` | Acknowledgement verified; task may proceed |
+| `DISPATCH_BLOCKED` | No valid reset/binding acknowledgement or no authorised dispatch path |
 
 ---
 
@@ -390,4 +434,4 @@ Discord has a 2000-character message limit. Violating it produces truncated or g
 
 ---
 
-*ELIS PM Agent · AGENTS.md · v2.3 · 2026-06-01*
+*ELIS PM Agent · AGENTS.md · v2.4 · 2026-06-02*
