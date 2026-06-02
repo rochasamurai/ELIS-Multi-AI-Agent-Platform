@@ -3,9 +3,13 @@
 This file defines the **two‑agent development workflow** for **ELIS SLR Agent — Release Plan v2.0**.
 It is mandatory for all **PEs** targeting the `<base-branch>` line.
 
-**Agents**
-- **CODEX** (default: Implementer)
-- **Claude Code** (default: Validator)
+**Agent roles**
+- **Implementer** (default slot: `a`, e.g. `infra-impl-a`)
+- **Validator** (default slot: `b`, e.g. `infra-val-b`)
+
+> Legacy engine labels **CODEX** and **Claude Code** are no longer the current role identifiers.
+> Use agent IDs from `CURRENT_PE.md` (e.g. `infra-impl-b`, `infra-val-a`).
+> Engine/slot mapping is recorded in §14.2 for CI compatibility only — it must not appear in PE proposals.
 
 > Role assignment is structural, not advisory.
 > Every agent reads `CURRENT_PE.md` at repo root as Step 0 to determine its role for the current PE.
@@ -102,7 +106,7 @@ Before starting any work on a PE, every agent MUST read:
 ### 2.8 Validator does not self-start
 - The Validator **waits for explicit PM authorisation** before beginning validation.
 - The PM assigns the Validator after receiving the Implementer's Status Packet (§5.1 step 9).
-- Assignment may be issued as a short PR comment (for example: `@claude-code — assigned as Validator. Begin review.`).
+- Assignment may be issued as a short PR comment (for example: `@<validator-agent-id> — assigned as Validator for <PE-ID>. Begin review.`).
 - A Validator who starts without PM assignment is out of role.
 
 ### 2.9 Mid-session context checkpoint
@@ -317,7 +321,7 @@ Use one of:
 ### 4.2 PR title format
 - `feat(pe4): deterministic dedup + clusters (elis dedup)`
 - `fix(pe6): archive validate_json.py + fix elis-validate.yml trigger`
-- `chore(audit): Claude Code workflow audit report`
+- `chore(audit): Validator workflow audit report`
 
 ### 4.3 PR creation
 ```bash
@@ -335,7 +339,7 @@ EOF
 
 ## 5) PE lifecycle (step-by-step)
 
-### 5.1 Implementer workflow (CODEX unless rotated)
+### 5.1 Implementer workflow
 
 1. **Preflight — before any work begins:**
    - Read all canonical references (Section 1).
@@ -437,7 +441,7 @@ verified with pasted output. Never batch completions.
 
 ---
 
-### 5.2 Validator workflow (Claude Code unless rotated)
+### 5.2 Validator workflow
 
 1. **Wait for PM assignment.** Do not begin without explicit PM authorisation (§2.8).
    - Preferred assignment signal: PM PR comment on the active PR.
@@ -876,10 +880,14 @@ If a secret-pattern file is detected in context, the agent must:
 | `slr-val-a`           | `slr-val`    | SLR            | Validator               |
 | `slr-val-b`           | `slr-val`    | SLR            | Validator               |
 
-Current slot registry:
+Current slot registry (legacy compatibility reference — CI use only):
 
-- slot `a` → CODEX / `codex`
-- slot `b` → Claude Code / `claude`
+> The labels below are accepted by `check_current_pe.py` for backward compatibility with
+> historical registry rows. They must **not** appear in PE opening proposals or PM reports.
+> Use agent IDs (e.g. `infra-impl-a`, `infra-val-b`) in all operational documents.
+
+- slot `a` → engine: `codex` (legacy label: `CODEX` / `slot-a`) — **do not use in proposals**
+- slot `b` → engine: `claude` (legacy label: `Claude Code` / `slot-b`) — **do not use in proposals**
 - slot `c` → guest or overflow engine (for example Gemini) when explicitly authorised
 
 Legacy model-coupled IDs remain accepted only through the committed migration

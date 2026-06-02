@@ -196,7 +196,7 @@ def _validate_engines(current: dict[str, str]) -> tuple[str, str]:
             f"'{current['validator-agentid']}'."
         )
     if impl_engine == val_engine:
-        raise ValueError("Implementer and validator must use opposite engines.")
+        raise ValueError("Implementer and validator must use opposite slots (different engines).")
 
     return impl_engine, val_engine
 
@@ -496,7 +496,7 @@ def _validate_dual_track(content: str, lines: list[str]) -> None:
                 f"registry has '{row['branch']}', expected '{branch}'."
             )
 
-    # Engines must differ (parallel tracks must use opposite engines)
+    # Implementer slots must differ across parallel tracks (slot a vs slot b)
     row_a = next(r for r in rows if r["pe-id"] == track_a_pe)
     row_b = next(r for r in rows if r["pe-id"] == track_b_pe)
     engine_a = _engine(row_a["implementer-agentid"])
@@ -506,8 +506,8 @@ def _validate_dual_track(content: str, lines: list[str]) -> None:
     if engine_a == engine_b:
         raise ValueError(
             f"Dual-track PEs {track_a_pe} and {track_b_pe} use the same "
-            f"implementer engine ('{engine_a}'). Parallel tracks must use "
-            "opposite engines."
+            f"implementer slot/engine ('{engine_a}'). Parallel tracks must use "
+            "opposite slots."
         )
 
     # No mutual dependency — load plan file and check

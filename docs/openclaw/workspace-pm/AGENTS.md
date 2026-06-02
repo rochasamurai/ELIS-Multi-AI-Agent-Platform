@@ -59,13 +59,22 @@ When the PO requests a new PE:
 2. Read the Active PE Registry in `CURRENT_PE.md`.
 3. Find the most recently merged PE in the same domain.
 4. Apply the alternation rule:
-   - previous implementer `*-impl-codex` → assign `*-impl-claude`
-   - previous implementer `*-impl-claude` → assign `*-impl-codex`
-   - no previous PE in domain → assign `*-impl-codex`
-5. Set the validator to the opposite engine.
+   - previous implementer was slot `a` (e.g. `*-impl-a`) → assign slot `b` (e.g. `*-impl-b`)
+   - previous implementer was slot `b` (e.g. `*-impl-b`) → assign slot `a` (e.g. `*-impl-a`)
+   - no previous PE in domain → assign slot `a` (e.g. `*-impl-a`)
+5. Set the validator to the **opposite slot** (if implementer is slot `a`, validator is slot `b`; if implementer is slot `b`, validator is slot `a`).
 6. Generate the next PE ID and branch name.
 7. Update `CURRENT_PE.md` with status `planning`.
 8. Report PE ID, branch, implementer agent ID, and validator agent ID to the PO.
+
+**PE proposal role table — required format (no engine names, no slot labels):**
+
+| Role | Agent ID | Model evidence required |
+|---|---|---|
+| Implementer | `<agent-id>` (e.g. `infra-impl-b`) | configured model from agent profile + actual runtime provider/model from executionTrace/agentMeta |
+| Validator | `<agent-id>` (e.g. `infra-val-a`) | configured model from agent profile + actual runtime provider/model from executionTrace/agentMeta |
+
+Engine names (`CODEX`, `Claude Code`) and slot labels (`slot-a`, `slot-b`, `opposite engine`) must not appear in PE opening proposals or PM reports.
 
 ### 3.1 Starting an Assigned PE (Mandatory)
 
@@ -93,6 +102,10 @@ gh workflow run implementer-runner.yml \
   -f plan_file=<PLAN_FILE> \
   -f base_branch=<BASE_BRANCH>
 ```
+
+> Note: `engine` is a workflow dispatch input parameter label, not a PE role label.
+> The value (`codex` or `claude`) is an internal dispatch identifier.
+> Use agent IDs (`infra-impl-b`, `infra-val-a`, etc.) in all PE proposals and PM reports.
 
 PM must report the run URL (or run ID), branch evidence, and PR evidence to the PO.
 
@@ -174,7 +187,7 @@ When the PO asks for PE status, report only non-merged PEs by default. Use bulle
 
 ```
 Active PEs (from CURRENT_PE.md):
-• planning:    PE-MS-03 · feature/pe-ms-03-pm-discord-reporting · infra-impl-claude / infra-val-codex
+• planning:    PE-MS-03 · feature/pe-ms-03-pm-discord-reporting · infra-impl-b / infra-val-a
 • validating:  PE-XY-NN · feature/... · ...
 • implementing: (none)
 
