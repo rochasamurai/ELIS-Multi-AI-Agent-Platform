@@ -21,15 +21,18 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | PE-OPS-A2A-GATE-2B-01 |
-| Branch  | feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor |
+| PE      | — |
+| Branch  | — |
+
+> plan-complete / no active PE — PE-OPS-A2A-GATE-2B-01 merged on `origin/main` (ea8047c6, 2026-06-02).
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| infra-impl-a | Implementer |
-| infra-val-b | Validator |
+| — | — |
+
+> no active PE roles
 
 
 ---
@@ -38,7 +41,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-A2A-GATE-2B-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor | implementing | 2026-06-02 |
+| PE-OPS-A2A-GATE-2B-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor | merged | 2026-06-02 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-02 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree | merged | 2026-05-28 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | merged | 2026-05-27 |
 | PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged | 2026-05-26 |
