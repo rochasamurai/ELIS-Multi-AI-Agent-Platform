@@ -1,12 +1,10 @@
 {
-  "current_state": "plan-complete",
-  "pe_id": "PE-OPS-OPENCLAW-CLI-PATH-01",
-  "branch": "feature/pe-ops-openclaw-cli-path-01-fix-openclaw-binary-path-resolution",
-  "merge_commit": "6efe7b27c6eb6c8c40cdf11eeeba5109f16d4280",
-  "merged_at": "2026-06-01",
-  "implementer": "infra-impl-b",
-  "validator": "infra-val-a",
-  "gate_2a": "PASS",
-  "gate_2b": "NOT_APPLICABLE — no A2A transport involved in this PE",
-  "note": "Merged PR #468 (2026-06-01). Alternation waiver granted by PO (OPS_AGENT_ALTERNATION_RULE_VIOLATION_AT_PE_OPENING; one-time). PE-local waiver mechanism added to check_current_pe.py. PM merge routing rule added to docs. Plan-complete mode: no active PE. Next ops PE must use infra-impl-a."
+  "current_state": "implementing",
+  "pe_id": "PE-OPS-A2A-GATE-2B-01",
+  "branch": "feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor",
+  "implementer": "infra-impl-a",
+  "validator": "infra-val-b",
+  "gate_2a": "NOT_APPLICABLE",
+  "gate_2b": "PASS — provisional, pending merge",
+  "note": "Active PE — pre-merge state. Preflight af0ce902, activation fdf163af, test fix f1272110, REVIEW 6c362251. State file updated as CI remediation: current_pe.json was not updated when PE-OPS-A2A-GATE-2B-01 was opened (PM_STATE_FILE_NOT_UPDATED_AT_PE_OPEN). Pending PO merge approval."
 }

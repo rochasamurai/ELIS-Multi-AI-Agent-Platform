@@ -22,7 +22,7 @@ The A2A layer enables ELIS agents to exchange structured coordination messages o
 - A coordination signal bus: agents can exchange status updates, task-state changes, evidence references, reset acknowledgements, and failure notifications.
 - An internal visibility layer that supplements — and never replaces — the existing PE workflow evidence trail.
 - Implemented as a Python module (`scripts/a2a_local_transport.py`) with a JSON Schema envelope (`schemas/a2a_message.schema.json`).
-- Transport mechanics: one JSON file per message, stored under `/tmp/elis_a2a/<recipient>/`, no sockets, no HTTP, no external network calls of any kind.
+- Transport mechanics: one JSON file per message, stored under `/opt/elis/a2a/mailboxes/<recipient>/`, no sockets, no HTTP, no external network calls of any kind.
 
 ---
 
@@ -90,7 +90,7 @@ Because the A2A layer is purely additive and does not modify any runtime configu
 1. **Revert the four authorised files** via `git revert <commit-sha>` or by reverting the PR.
 2. No service restarts are required.
 3. No configuration changes are required.
-4. No database or state cleanup is required — `/tmp/elis_a2a/` is ephemeral and is not committed to the repository.
+4. No database or state cleanup is required — `/opt/elis/a2a/` is not committed to the repository.
 
 Partial rollback (e.g., removing the transport but keeping the schema) is also safe because the files have no mutual runtime dependency outside the test suite.
 

@@ -110,7 +110,7 @@ The current scope is intentionally limited to local runtime primitives, includin
 
 - message schema;
 - local transport;
-- file-backed mailbox under `/tmp/elis_a2a/`;
+- file-backed mailbox under `/opt/elis/a2a/mailboxes/`;
 - structured message types;
 - tests for local round-trip behaviour;
 - governance documentation clarifying non-authority boundaries.
