@@ -1,13 +1,12 @@
 {
-  "current_state": "plan-complete",
-  "pe_id": "PE-OPS-A2A-GATE-2B-01",
-  "branch": "feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor",
-  "merge_commit": "ea8047c6c95b2dbb806ce5c9aee74c439f5e85d8",
-  "merged_at": "2026-06-02",
-  "implementer": "infra-impl-a",
-  "validator": "infra-val-b",
-  "gate_2a": "NOT_APPLICABLE",
-  "gate_2b": "PASS",
-  "a2a_final_state": "ENABLED",
-  "note": "Merged PR #469 (2026-06-02). A2A runtime activated for PM/Supervisor/Advisor. /opt/elis/a2a/.enabled created (mode 640, samurai:samurai). Supervisor/Advisor mailboxes provisioned. 43/43 tests passing. plan-complete / no active PE. Follow-ups: GITHUB_AGENT_PRODUCTION_IDENTITY_NOT_YET_ENFORCED, SESSIONS_SPAWN_TOOL_ACCESS_UNRELIABLE_FOR_TOOL_WORK, token/reset enforcement PE (future), Advisor production PE (future)."
+  "current_state": "implementing",
+  "pe_id": "PE-OPS-GITHUB-IDENTITY-01",
+  "branch": "feature/pe-ops-github-identity-01-enforce-elis-github-production-identity",
+  "implementer": "infra-impl-b",
+  "validator": "infra-val-a",
+  "opened_at": "2026-06-02",
+  "base_branch": "main",
+  "starting_head": "449ef71d397ddf57df54b9a0301cf5dbd1f25cfe",
+  "risk_classification": "Strict/Security/GitHub-Identity/A2A-Integration",
+  "note": "Opened 2026-06-02. Scope: enforce ELIS GitHub production identity (app/elis-github); PM<->ELIS GitHub workflow via A2A; add github-agent as 4th A2A participant (request/report only). rochasamurai is not accepted as target identity — observed use classified as TEMPORARY_HUMAN_GITHUB_AUTH_RISK. No credential removal in this PE. Initial A2A tests use non-executable identity/status messages only. Live GitHub writes require separate PO approval."
 }
