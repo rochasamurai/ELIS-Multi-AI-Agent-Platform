@@ -21,14 +21,15 @@
 
 | Field   | Value |
 |---------|-------|
-| PE      | — |
-| Branch  | — |
+| PE      | PE-OPS-A2A-GATE-2B-01 |
+| Branch  | feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor |
 
 ## Agent roles
 
 | Agent | Role |
 |-------|------|
-| — | — |
+| infra-impl-a | Implementer |
+| infra-val-b | Validator |
 
 
 ---
@@ -37,6 +38,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
+| PE-OPS-A2A-GATE-2B-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor | implementing | 2026-06-02 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-02 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree | merged | 2026-05-28 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | merged | 2026-05-27 |
 | PE-OPS-A2A-RUNTIME-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-runtime-01-clean-local-backbone | merged | 2026-05-26 |
@@ -282,6 +284,7 @@ PM housekeeping entries (prefix `PM-CHORE-XX`):
 
 
 | PM-CHORE-108 | Closed PE-OPS-OPENCLAW-CLI-PATH-01 as merged (PR #468, infra-val-a V2 PASS; merge SHA `6efe7b27c6eb6c8c40cdf11eeeba5109f16d4280`, merged 2026-06-01T19:34:14Z via ELIS GitHub direct-agent path). Alternation waiver granted by PO (OPS_AGENT_ALTERNATION_RULE_VIOLATION_AT_PE_OPENING; one-time, infra-impl-b; next ops PE must use infra-impl-a). PE-local waiver mechanism added to `scripts/check_current_pe.py` (8 tests). PM merge routing rule added to `docs/openclaw/workspace-pm/AGENTS.md` §4.1 and `docs/governance/ELIS_GitHub_Agent_Operating_Model.md` v1.3. Plan-complete mode restored: PE and Branch cleared; no active PE. Follow-ups: GITHUB_PROJECT_BOARD_TOKEN_BAD_CREDENTIALS (infrastructure); PM alternation-check logic must scan full ops registry in table order (LESSONS_LEARNED.md). | 2026-06-01 |
+| PM-CHORE-110 | Opened PE-OPS-A2A-GATE-2B-01 (Activate A2A Runtime for PM / Supervisor / Advisor Communication) with `infra-impl-a` as Implementer and `infra-val-b` as Validator per alternation rule (alternation waiver from PM-CHORE-108 mandates infra-impl-a; validator assignment: infra-val-b, paired with infra-impl-a under the current implementer/validator assignment model). Risk classification: Strict/Platform. Starting HEAD: `04c55dd07994c4cef2fbe4b4db82a6051faf6b4b`. Branch: `feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor`. Activation is not yet authorised — preflight pass + separate PM go-ahead required before `/opt/elis/a2a/.enabled` is created. | 2026-06-02 |
 | PM-CHORE-109 | SCOPE_CORRECTION — PE_CLOSEOUT_FILE_SCOPE_OVERREPORTED (2026-06-02). PE_CLOSEOUT_REPORT_V1 incorrectly listed `elis/openclaw_binary_finder.py` as a delivered file. Verified via `git show 6efe7b2 --stat`: PR #468 merged exactly 8 files (`.elis/pe/PE-OPS-OPENCLAW-CLI-PATH-01/ALTERNATION_WAIVER.md`, `HANDOFF.md`, `REVIEW_PE-OPS-OPENCLAW-CLI-PATH-01.md`, `REVIEW_PE-OPS-OPENCLAW-CLI-PATH-01_V2.md`, `docs/governance/ELIS_GitHub_Agent_Operating_Model.md`, `docs/openclaw/workspace-pm/AGENTS.md`, `scripts/check_current_pe.py`, `tests/test_check_current_pe.py`). No binary finder code was delivered in this PE. The actual PATH fix was achieved via Supervisor correction of the systemd drop-in PATH and gateway-spawned OpenClaw 2026.5.27 verification. PO classified as PE_CLOSEOUT_FILE_SCOPE_OVERREPORTED and does not require reopening PE-OPS-OPENCLAW-CLI-PATH-01. Follow-up recorded: if a code-level deterministic binary finder enhancement is still desired, it must be scoped as a separate PE. No Gate 2B action taken. No `/opt/elis/a2a/.enabled` created. | 2026-06-02 |
 
 Alternation rule:
