@@ -389,10 +389,16 @@ class TestListMessages:
 
 class TestGate2AEnabledSentinel:
     def test_transport_raises_when_sentinel_absent(self, tmp_path):
+        import a2a_local_transport as mod
         from a2a_local_transport import A2ATransportDisabledError
 
-        with pytest.raises(A2ATransportDisabledError, match="disabled"):
-            A2ATransport(mailbox_root=tmp_path)
+        original = mod._ENABLED_SENTINEL
+        mod._ENABLED_SENTINEL = tmp_path / ".enabled"
+        try:
+            with pytest.raises(A2ATransportDisabledError, match="disabled"):
+                A2ATransport(mailbox_root=tmp_path)
+        finally:
+            mod._ENABLED_SENTINEL = original
 
     def test_transport_succeeds_when_sentinel_present(self, tmp_path):
         import a2a_local_transport as mod
