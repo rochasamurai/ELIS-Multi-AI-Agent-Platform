@@ -26,7 +26,7 @@ ELIS GitHub production identity. They must not be treated as separate actors wit
 authority boundaries. All GitHub write operations — regardless of binding — are governed by
 the permission matrix in §5 and the launcher rule in §4.4a.
 
-Cross-reference worked-example identity invocation: `docs/governance/ELIS_Worked_Example_GitHub_Identity_v1.md`
+Cross-reference worked-example identity invocation: `docs/governance/ELIS_Worked_Example_GitHub_Identity_v1.md` *(not yet created — future PE scope)*
 
 ## 2. Scope
 In scope:

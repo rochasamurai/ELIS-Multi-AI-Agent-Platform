@@ -83,7 +83,7 @@ github-agent added as future A2A participant. No authority expansion via A2A. Ma
 
 ## 5. Commit
 
-**Commit SHA:** `e2e35680`
+**Commit SHA:** `7b09dcd9`
 
 **Commit message:** `docs(gate-1): wire ELIS GitHub production identity into governance docs [PE-OPS-GITHUB-IDENTITY-01]`
 
