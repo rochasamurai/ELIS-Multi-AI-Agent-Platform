@@ -8,6 +8,26 @@
 ## 1. Purpose
 This document defines the GitHub Write Boundary Model for ELIS: the operating model that governs which roles may perform which GitHub write operations, under what gates, and with what approval. It supersedes ad-hoc permission patterns and codifies the boundary explicitly for every agent role.
 
+### 1.1 ELIS GitHub Identity / Actor Terminology
+
+The following table defines the canonical ELIS GitHub identity layer — the set of identities,
+actors, and credentials governed by this operating model:
+
+| Identity | Type | Purpose | Governing Role |
+|----------|------|---------|----------------|
+| `elis-github` | OS user (service account) | Owns `bin/gh-agent`, credential files under `/opt/elis/secrets/`, and the canonical GitHub CLI context on elis-server | GitHub Agent, PM (routing only) |
+| `elis-git-bot <elis-git-bot@electoralintegrity.org>` | Git commit author | Author name/email for all ELIS bot-generated commits pushed to GitHub | GitHub Agent (via `bin/gh-agent`) |
+| `app/elis-github` | GitHub API / PR actor | Actor identity recorded in GitHub API events for PR creation, review, comment, merge, and label operations | GitHub Agent (via `bin/gh-agent`) |
+| `elis-git-bot` | GitHub.com bot account | The GitHub user account associated with the bot identity; used for web UI login and manual fallback when automation is unavailable | PO / Carlos (emergency fallback only) |
+
+**Security context:** The OS user `elis-github`, Git commit author `elis-git-bot`, GitHub API actor
+`app/elis-github`, and GitHub.com bot account `elis-git-bot` are distinct bindings of the same
+ELIS GitHub production identity. They must not be treated as separate actors with independent
+authority boundaries. All GitHub write operations — regardless of binding — are governed by
+the permission matrix in §5 and the launcher rule in §4.4a.
+
+Cross-reference worked-example identity invocation: `docs/governance/ELIS_Worked_Example_GitHub_Identity_v1.md`
+
 ## 2. Scope
 In scope:
 - Role-based permission boundaries for GitHub operations
@@ -49,6 +69,90 @@ Owns PE coordination, authorisation checkpoints, and fallback escalation. PM mus
 A permanent ELIS role with PE-scoped activation for write-capable GitHub operations: push, PR lifecycle, PR merge (when PO-approved), labels, comments, review requests, check reporting. Does not independently approve scope, validation, or merge — all merge operations require explicit PO approval before execution.
 
 **PR merge routing:** PM receives PO merge approval, then routes the merge request to ELIS GitHub. ELIS GitHub executes the merge using its authorised credential boundary (`app/elis-github` identity). PM must not execute GitHub Agent binaries locally or access GitHub Agent credential files. Supervisor is the escalation path for errors only.
+
+### 4.4a Mandatory Launcher Rule
+
+All GitHub CLI operations that create, update, review, or merge PRs **must** use the
+`bin/gh-agent` script. Direct `gh` invocation for mutating operations is prohibited.
+
+**Rationale:** `bin/gh-agent` enforces the correct identity (`app/elis-github`), credential
+source (`/opt/elis/secrets/github-agent.env`), fixed workspace path, and required gate checks
+before executing any write-capable GitHub operation. Bypassing this wrapper risks identity
+mismatch, credential leakage, or ungoverned write operations.
+
+**Scope of mandatory use:**
+- PR creation
+- PR update (title, body, labels, reviewers, milestone)
+- PR review submission (approve, comment, request changes)
+- PR merge
+- PR comment posting
+- Push to remote
+
+**Read-only exceptions:** Direct `gh` is permitted for read-only operations explicitly
+documented in this file (see §4.4b).
+
+### 4.4b Raw `gh` Policy
+
+Direct `gh` invocation is permitted **only** for read-only, non-mutating operations explicitly
+documented in this file. Permitted read-only `gh` operations include:
+- `gh pr list` (list open PRs)
+- `gh pr view <number>` (view PR details)
+- `gh run list` (list workflow runs)
+- `gh run view <run-id>` (view run details)
+- `gh api GET ...` (read-only API calls)
+- `gh auth status` (verify current auth context — must resolve to identity governed by this model)
+
+**TEMPORARY_HUMAN_GITHUB_AUTH_RISK / GITHUB_ACTOR_MISMATCH classification:**
+
+Any `gh` invocation — read or write — whose resolved GitHub user identity is `rochasamurai`
+must be classified as one of:
+- `TEMPORARY_HUMAN_GITHUB_AUTH_RISK` — when the context is a known migration, setup, or
+  emergency fallback under explicit PO authorisation
+- `GITHUB_ACTOR_MISMATCH` — when the resolved identity does not match the governed ELIS GitHub
+  identity documented in §1.1 and no explicit PO authorisation exists
+
+PM must not route, approve, or silently allow any operation where the resolved `gh` identity
+is `rochasamurai` without first confirming the classification and obtaining PO approval if the
+context is `GITHUB_ACTOR_MISMATCH`.
+
+### 4.4c A2A Request/Report Flow Stub (github-agent)
+
+**Status:** Mailbox creation deferred to Gate 2.
+
+The GitHub Agent will participate in A2A messaging for request/report flows once its A2A
+mailbox is created and the communication matrix is updated. Until then, all GitHub Agent
+communication uses the Discord-based routing path defined in the PM orchestration rules.
+
+**Planned A2A message types (post-mailbox creation):**
+- `GITHUB_OPERATION_REQUEST_V1` — PM requests a GitHub write operation
+- `GITHUB_OPERATION_REPORT_V1` — GitHub Agent reports operation result
+- `GITHUB_STATUS_REQUEST_V1` — PM requests GitHub Agent status
+- `GITHUB_STATUS_REPORT_V1` — GitHub Agent reports operational status
+
+### 4.4d Secret Boundary — `/opt/elis/secrets/github-agent.env`
+
+**Purpose:** The file `/opt/elis/secrets/github-agent.env` contains the GitHub token and
+credential context used by `bin/gh-agent` for all governed GitHub write operations.
+
+**File existence:** The file must exist at `/opt/elis/secrets/github-agent.env` for the
+github-agent role to function. If the file is absent, `bin/gh-agent` must fail closed — no
+GitHub write operation may proceed.
+
+**Permissions:** The file must be readable only by the `elis-github` OS user. Minimum
+permissions: `600` (owner read/write). The file must not be world-readable, group-readable,
+or readable by any OpenClaw/Hermes agent runtime process.
+
+**Access prohibitions:**
+- No OpenClaw agent (implementer, validator, PM, supervisor, advisor) may read this file
+- No Hermes agent may read this file
+- No CI/CD pipeline step that runs as a non-"elis-github" user may read this file
+- PM must not reference, read, or access credential file contents — PM routes merge requests,
+  it does not handle credentials
+- Any attempt to `cat`, `source`, or otherwise inspect file contents from an ungoverned
+  context is a credential boundary violation
+
+**Note to implementers:** This section documents file existence and permissions requirements
+only. File contents have not been inspected. No credential mutation has occurred.
 
 ### 4.5 Carlos / PO
 Final approval authority for merge, scope exceptions, and any escalation that changes repository state.

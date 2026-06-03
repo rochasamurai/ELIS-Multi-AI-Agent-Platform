@@ -42,8 +42,40 @@ The following agents are **explicitly excluded** from Phase-1 A2A:
   `prisma-impl-b`, `prog-impl-a`, `prog-impl-b`, `infra-impl-a`, `infra-impl-b`)
 - All validator agents (`harvest-val-b`, `screen-val-a`, `extract-val-b`, `synth-val-a`,
   `prisma-val-a`, `prog-val-a`, `prog-val-b`, `infra-val-a`, `infra-val-b`)
-- GitHub Agent
+- GitHub Agent (future A2A participant — see §2.2)
 - Any agent not listed in Section 2
+
+### 2.2 Future A2A Participant — github-agent
+
+**Status:** Mailbox creation deferred to Gate 2. No A2A mailbox exists for github-agent in Phase 1.
+
+The GitHub Agent (`github-agent`) is designated as a future A2A request/report participant.
+Once its A2A mailbox is created in Gate 2, the following communication pairs will be added:
+
+```
+PM <-> GitHub Agent
+```
+
+**Planned A2A message types (post-mailbox creation):**
+- `GITHUB_OPERATION_REQUEST_V1` — PM requests a GitHub write operation
+- `GITHUB_OPERATION_REPORT_V1` — GitHub Agent reports operation result
+- `GITHUB_STATUS_REQUEST_V1` — PM requests GitHub Agent status
+- `GITHUB_STATUS_REPORT_V1` — GitHub Agent reports operational status
+
+**Authority constraint:** github-agent has **no authority expansion via A2A**. Its A2A
+participation does not grant it implementation, validation, config editing, credential access,
+or any GitHub write authority beyond what is already defined in its operating model
+(`ELIS_GitHub_Agent_Operating_Model.md`). A2A is a communication channel only — the
+permission matrix in the GitHub Agent operating model remains the sole source of
+authority boundaries for the github-agent role.
+
+Until Gate 2, all github-agent communication uses the Discord-based routing path defined
+in the PM orchestration rules.
+
+**Prohibited during Gate 1:**
+- Creating github-agent A2A mailbox files
+- Registering github-agent in gateway configuration
+- Any runtime A2A setup for github-agent
 
 ---
 

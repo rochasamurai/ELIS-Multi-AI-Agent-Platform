@@ -82,6 +82,29 @@ Engine names (`CODEX`, `Claude Code`) and slot labels (`slot-a`, `slot-b`, `oppo
 If a PE is assigned and the PO asks PM to start implementation, PM must not wait for a
 directly reachable agent chat session. Use workflow dispatch as the primary start path.
 
+**Dispatch-path correction — GitHub Actions self-hosted runner:**
+
+The GitHub Actions self-hosted runner dispatch path (`implementer-runner.yml`, `[self-hosted, elis-server]`
+labels) is classified `GITHUB_ACTIONS_RUNNER_DISPATCH_PATH_ORPHANED`. No runner is installed, no runner
+is registered, and the PO has confirmed this path is not currently provisioned.
+
+**This path must not be treated as an active or primary implementer or validator dispatch path**
+unless and until:
+- a self-hosted runner is installed on elis-server
+- the runner is registered with the repository
+- the runner is governed under the ELIS operating model
+- the path is explicitly enabled by a future PO-approved provisioning PE
+
+**Current ELIS production path** favours governed OpenClaw/Hermes agent invocation (see
+§3.2 permitted dispatch paths for the authorised alternatives). The `ci-current-pe.yml` →
+`implementer-runner.yml` automatic dispatch chain must be considered non-functional until the
+runner dispatch path is provisioned.
+
+**ELIS GitHub** is the governed GitHub operations actor, not a self-hosted runner replacement.
+The ELIS GitHub operating model (see `docs/governance/ELIS_GitHub_Agent_Operating_Model.md`)
+governs GitHub write operations (push, PR, merge, labels, reviews). It does not provide a
+runner execution environment for CI/CD workflows.
+
 Required start actions:
 
 1. Update active PE status in `CURRENT_PE.md` to `implementing` on `main`.
