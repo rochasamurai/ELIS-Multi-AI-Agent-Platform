@@ -532,3 +532,39 @@ rebind Supervisor, or treat Supervisor as an implementer/validator target sessio
 - PM AGENTS.md §3.3 contains the PM-side operational form of this rule.
 - Supervisor is not a PE implementer or validator target. It routes and diagnoses; it does not execute PE coding tasks.
 - PO is notified on detection.
+
+---
+
+## ELIS_OPERATIONAL_ARTEFACT_FORMAT_RULE
+
+Canonical ELIS operational artefacts and reports must use `.md` for human-readable reports,
+handoffs, reviews, plans, evidence summaries, and operational notes, and `.json` for
+machine-readable state, mailbox, audit, status, and event records.
+
+`.txt` must not be used as the canonical format for ELIS reports, handoffs, reviews,
+PM/Supervisor/Advisor evidence packets, PE artefacts, or operational status records.
+
+`.txt` is allowed only for raw external command output, raw logs, captured terminal streams,
+or temporary non-canonical scratch output.
+
+### Format reference table
+
+| Artefact type | Required format |
+|---|---|
+| Human-readable reports, evidence summaries, operational notes | `.md` |
+| HANDOFF files, REVIEW files, PE artefacts | `.md` |
+| Machine-readable state, status, event records | `.json` |
+| A2A mailbox messages | `.json` |
+| Raw external command output, raw logs, terminal captures | `.txt` (non-canonical only) |
+| Temporary scratch output | `.txt` (non-canonical only) |
+
+### Violation classification
+
+- `ELIS_OPERATIONAL_ARTEFACT_FORMAT_VIOLATION` — a canonical ELIS report, handoff, review, or PE artefact was written as `.txt`
+
+### Enforcement
+
+- PM AGENTS.md §10 contains the PM-side operational form of this rule.
+- Existing `.txt` files at `/home/samurai/.hermes/reports/` that predate this rule are classified as HISTORICAL_LEGACY_ONLY and do not require retroactive conversion unless they are the active canonical version of a current report.
+- `IMPLEMENTER_RESET_BINDING_ACK_REPORT_V3.txt` is superseded by `V3.md` (human-readable) and `V3.json` (machine-readable); the `.txt` path is retired.
+- New reports from PM, Supervisor, and Advisor must use `.md` or `.json` from the date this rule is active.

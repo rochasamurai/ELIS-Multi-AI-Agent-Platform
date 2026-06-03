@@ -457,4 +457,29 @@ Discord has a 2000-character message limit. Violating it produces truncated or g
 
 ---
 
-*ELIS PM Agent · AGENTS.md · v2.4 · 2026-06-02*
+## 10. Operational Artefact Format Standards — ELIS_OPERATIONAL_ARTEFACT_FORMAT_RULE (Mandatory)
+
+Canonical ELIS operational artefacts and reports must use `.md` for human-readable reports,
+handoffs, reviews, plans, evidence summaries, and operational notes, and `.json` for
+machine-readable state, mailbox, audit, status, and event records.
+
+`.txt` must not be used as the canonical format for ELIS reports, handoffs, reviews,
+PM/Supervisor/Advisor evidence packets, PE artefacts, or operational status records.
+
+`.txt` is allowed only for raw external command output, raw logs, captured terminal streams,
+or temporary non-canonical scratch output.
+
+**Format reference table:**
+
+| Artefact type | Required format |
+|---|---|
+| Human-readable reports, evidence summaries, operational notes | `.md` |
+| HANDOFF files, REVIEW files, PE artefacts | `.md` |
+| Machine-readable state, status, event records | `.json` |
+| A2A mailbox messages | `.json` |
+| Raw external command output, raw logs, terminal captures | `.txt` (non-canonical only) |
+| Temporary scratch output | `.txt` (non-canonical only) |
+
+---
+
+*ELIS PM Agent · AGENTS.md · v2.5 · 2026-06-03*
