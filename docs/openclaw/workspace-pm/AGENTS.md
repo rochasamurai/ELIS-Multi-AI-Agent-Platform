@@ -145,9 +145,15 @@ Tool availability is not authorisation.
 
 **Permitted dispatch paths for PE implementer/validator work:**
 
-1. Approved GitHub Actions workflow dispatch (`gh workflow run implementer-runner.yml`), where applicable.
-2. Supervisor-routed OpenClaw CLI direct-agent invocation.
+1. PM-owned OpenClaw CLI direct-agent invocation (`openclaw agent --agent <agent-id>`). This is the PM-owned authorised dispatch path for all PE implementer and validator work. PM executes it directly; it is **not** Supervisor-routed. Supervisor may use the same OpenClaw CLI mechanism for diagnostic/binding verification when escalated, but PM owns the dispatch path for routine PE work.
+2. Approved GitHub Actions workflow dispatch (`gh workflow run implementer-runner.yml` / `gh workflow run validator-runner.yml`), where applicable and only when the self-hosted GitHub Actions runner is installed and governed.
 3. Future governed live dispatch wrapper, once implemented and PO-approved.
+
+Supervisor is **exception/escalation only**, not the routine dispatcher. Supervisor is not a normal implementer or validator dispatch path. If the PM-owned OpenClaw CLI path appears unavailable, classify it as a **platform configuration defect**, not as permission to route through Supervisor.
+
+The GitHub Actions self-hosted runner is **not currently installed** on elis-server. Until a PO-approved runner PE installs and governs it, the GitHub Actions runner dispatch paths are inactive.
+
+Raw `sessions_spawn` remains prohibited for all PE work. Tool availability is not authorisation.
 
 Any other dispatch path requires explicit named PO approval before use.
 
@@ -205,17 +211,35 @@ Supervisor is not a PE implementer or validator target. Supervisor routes and di
 
 ### Gate 1 — Validator Assignment
 
-Check automatically when a PR is updated:
+When the implementer has completed work and the gate conditions below are met, dispatch the validator via the PM-owned OpenClaw CLI direct-agent path.
 
+**Pre-dispatch checks:**
 - CI status is green
 - `HANDOFF.md` is committed on the branch
 - Status Packet is present in the PR body or PR comments
 
-If all three are true:
+**Primary dispatch path (PM-owned):**
 
-> `@<validator-agent-id> — assigned as Validator for <PE-ID>. Begin review.`
+```bash
+OPENCLAW_STATE_DIR=/home/samurai/.openclaw \
+  /opt/openclaw/bin/openclaw agent \
+  --agent <validator-agent-id> \
+  --session-key agent:<validator-agent-id>:gate1-<PE-ID> \
+  --message "<validator assignment message>" \
+  --json --timeout 600
+```
 
-Update PE status in `CURRENT_PE.md` to `validating`.
+The `--message` must include: PE ID, branch, implementer HANDOFF.md location, acceptance criteria, and hard stops.
+
+Always use a unique `--session-key` per dispatch. Never reuse the agent's `main` session — this causes stale cached responses. See `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` §DISPATCH_SESSION_KEY_RULE.
+
+After dispatch: update PE status in `CURRENT_PE.md` to `validating`.
+
+**Fallback (only when PM-owned direct dispatch is unavailable):**
+
+Post validator-assignment comment on PR (machine tag `<!-- validator-assignment -->`) so `validator-dispatch.yml` can start the runner. **Only applicable when the GitHub Actions self-hosted runner is installed and governed.** The self-hosted runner is not currently active on elis-server.
+
+**Supervisor is not the routine Gate 1 dispatcher.** Escalate to Supervisor only for platform runtime defects (e.g., OpenClaw gateway failure, agent auth failure), not for normal validator dispatch.
 
 ### Gate 2 — Merge
 
@@ -411,7 +435,7 @@ Rules:
 - PM must not write to project stores without explicit PO approval and operator execution
 - PM-authored writes to project stores are a policy violation
 
-Write or restart commands require PO/operator approval:
+Write, restart, or dispatch commands require PO/operator approval:
 
 ```bash
 openclaw config set <path> <value>
@@ -421,6 +445,18 @@ gh workflow run implementer-runner.yml
 gh workflow run validator-runner.yml
 systemctl --user restart openclaw-gateway
 ```
+
+**PM-owned dispatch command (authorised for routine PE dispatch):**
+
+```bash
+OPENCLAW_STATE_DIR=/home/samurai/.openclaw /opt/openclaw/bin/openclaw agent \
+  --agent <agent-id> \
+  --session-key agent:<agent-id>:<unique-suffix> \
+  --message "<dispatch message>" \
+  --json --timeout <seconds>
+```
+
+This is the PM-owned direct-agent dispatch path. Always use a unique `--session-key`. Never reuse the agent's `main` session. See §3.2 for permitted usage.
 
 Never run:
 
@@ -505,4 +541,4 @@ or temporary non-canonical scratch output.
 
 ---
 
-*ELIS PM Agent · AGENTS.md · v2.5 · 2026-06-03*
+*ELIS PM Agent · AGENTS.md · v2.6 · 2026-06-03*

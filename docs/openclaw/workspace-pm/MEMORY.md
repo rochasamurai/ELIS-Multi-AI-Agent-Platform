@@ -22,6 +22,11 @@ This file records the durable corrections that must survive session drift.
   `scripts/generate_pe_status_report.py`; it must stay sourced from `CURRENT_PE.md`,
   the active plan, review files, and `LESSONS_LEARNED.md`.
 - PE start does not require a direct implementer chat session. PM starts assigned PEs by moving status to `implementing` on `main` and verifying dispatcher evidence (`ci-current-pe` -> `implementer-runner`).
+- **PM owns implementer and validator dispatch.** The PM-owned authorised dispatch path is `openclaw agent --agent <agent-id>`. PM executes it directly; it is NOT Supervisor-routed. Documented at `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` §PM_DISPATCH_OWNERSHIP_RULE.
+- **Supervisor is exception/escalation only**, not the routine dispatcher. If PM believes the PM-owned dispatch path is unavailable, classify it as a platform configuration defect, not permission to route through Supervisor. Documented at `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` §SUPERVISOR_ESCALATION_ONLY_RULE.
+- **GitHub Actions self-hosted runner is not active** on elis-server. `gh workflow run validator-runner.yml` and `gh workflow run implementer-runner.yml` are inactive until a PO-approved runner PE installs and governs the runner.
+- **Raw `sessions_spawn` is prohibited** for all PE implementer and validator work. Tool availability is not authorisation.
+- **Always use unique `--session-key`** with `openclaw agent` dispatches. Format: `agent:<agent-id>:<unique-suffix>`. Never reuse the agent's `main` session. Documented at `docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md` §DISPATCH_SESSION_KEY_RULE.
 
 ---
 
@@ -41,7 +46,11 @@ Do not claim new prompt behavior is active until a fresh session starts.
 - worktree answers inferred from registry branch names
 - stale copied files used silently when entrypoints fail
 - full 7-column Active PE Registry table rendered in Discord
+- `sessions_send` as the default validator dispatch path
+- Supervisor-routed dispatch as a normal PM dispatch path
+- PR-comment-only validator assignment without a PM-owned dispatch attempt
+- `openclaw agent` calls without a unique `--session-key`
 
 ---
 
-*ELIS PM Agent · MEMORY.md · v1.1 · 2026-03-23*
+*ELIS PM Agent · MEMORY.md · v1.2 · 2026-06-03*
