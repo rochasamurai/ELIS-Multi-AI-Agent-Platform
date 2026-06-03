@@ -123,8 +123,8 @@ Only then proceed with the commit.
 Gate 1 and Gate 2 are enforced by CI automation after PE-INFRA-04.
 
 **Gate 1 (Validator assignment):**
-- Primary path: PM dispatches the validator via the PM-owned OpenClaw CLI
-  direct-agent path (`openclaw agent --agent <validator-id>`)
+- Default path: PM dispatches the validator assignment directly via the
+  PM-owned OpenClaw CLI direct-agent path (`openclaw agent --agent <validator-id>`)
   after Status Packet and gate checks.
 - Documentation: `docs/openclaw/workspace-pm/AGENTS.md` §4 Gate 1.
 - `sessions_send` is no longer the primary dispatch mechanism and must not be
@@ -133,6 +133,8 @@ Gate 1 and Gate 2 are enforced by CI automation after PE-INFRA-04.
   PR comment path (machine tag `<!-- validator-assignment -->`) triggers
   `validator-dispatch.yml`. This requires the GitHub Actions self-hosted runner
   to be installed and governed — it is not currently active on elis-server.
+  PO relay is a last-resort fallback only; it must not replace PM-owned direct
+  dispatch as the normal path.
 - Supervisor is exception/escalation only, not the routine dispatcher.
   PM must not route routine validator dispatch through Supervisor.
   Escalate to Supervisor only for platform runtime defects.

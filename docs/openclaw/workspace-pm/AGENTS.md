@@ -211,8 +211,6 @@ Supervisor is not a PE implementer or validator target. Supervisor routes and di
 
 ### Gate 1 — Validator Assignment
 
-**Default path: PM dispatches the validator assignment directly** via the PM-owned OpenClaw CLI (`openclaw agent --agent <id> --session-key ...`). Supervisor is exception/escalation only and must not be used as a routine validator dispatcher. Raw `sessions_spawn` remains prohibited for PE dispatch.
-
 When the implementer has completed work and the gate conditions below are met, dispatch the validator via the PM-owned OpenClaw CLI direct-agent path.
 
 **Pre-dispatch checks:**
