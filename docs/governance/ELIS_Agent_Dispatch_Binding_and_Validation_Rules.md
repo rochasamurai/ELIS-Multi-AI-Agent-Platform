@@ -220,12 +220,54 @@ When binding failures occur:
 4. Document for post-mortem analysis
 5. Implement preventive measures for recurrence
 
+## PM_DISPATCH_OWNERSHIP_RULE
+
+PM owns implementer and validator dispatch. The PM-owned authorised dispatch path is the OpenClaw CLI direct-agent invocation:
+
+```bash
+OPENCLAW_STATE_DIR=/home/samurai/.openclaw /opt/openclaw/bin/openclaw agent \
+  --agent <agent-id> \
+  --session-key agent:<agent-id>:<unique-suffix> \
+  --message "<dispatch message>" \
+  --json --timeout <seconds>
+```
+
+PM executes this command directly. It is **not** Supervisor-routed.
+
+Supervisor uses the same OpenClaw CLI mechanism only for exception/escalation — it is not the routine dispatcher. If PM believes the PM-owned path is unavailable, classify it as a platform configuration defect (`PLATFORM_DISPATCH_PATH_REPAIR_REQUIRED`), not as permission to route through Supervisor.
+
+GitHub Actions self-hosted runner dispatch (`gh workflow run validator-runner.yml` / `gh workflow run implementer-runner.yml`) is not active on elis-server. The self-hosted runner is not installed. Runner dispatch paths are inactive until a PO-approved runner PE installs and governs the runner.
+
+Raw `sessions_spawn` remains prohibited for all PE implementer and validator work.
+
+## DISPATCH_SESSION_KEY_RULE
+
+Every `openclaw agent` dispatch invoked by PM via OpenClaw CLI MUST use a unique `--session-key`. Without `--session-key`, OpenClaw CLI reuses the agent's `main` session, causing stale cached responses (wrong HEAD, zero tool calls, stale messageCount).
+
+Required format: `agent:<agent-id>:<unique-suffix>`
+
+Example: `agent:infra-val-a:gate1-PE-OPS-GITHUB-IDENTITY-01`
+
+The binding acknowledgement session and the task dispatch session MUST use different session keys. Reusing the binding session key for the task carries forward binding context, inflating messageCount and risking stale state.
+
+## SUPERVISOR_ESCALATION_ONLY_RULE
+
+Supervisor handles diagnostics and escalation only. Supervisor must not be treated as the normal implementer or validator dispatch path. PM must not route routine validator assignment or implementer dispatch through Supervisor.
+
+Authorised Supervisor involvement:
+- Platform runtime defect diagnosis (OpenClaw gateway failure, agent auth failure, config drift)
+- Binding verification when escalated by PM
+- Recovery workflows when PM-owned dispatch is blocked by a platform fault
+
+Supervisor must not become the normal dispatcher for any PE role.
+
 ## Version History
 
-| Version | Date       | Author | Changes |
-|---------|------------|--------|---------|
-| 1.3     | 2026-05-17 | PM     | Restored core dispatch rules and expanded state change validation |
-| 1.0     | 2026-05-17 | PM     | Initial draft incorporating runtime/worktree separation requirements |
+| Version | Date       | Author     | Changes |
+|---------|------------|------------|---------|
+| 1.5     | 2026-06-03 | Supervisor | added PM_DISPATCH_OWNERSHIP_RULE, DISPATCH_SESSION_KEY_RULE, SUPERVISOR_ESCALATION_ONLY_RULE; established PM-owned OpenClaw CLI direct-agent dispatch as primary path |
+| 1.3     | 2026-05-17 | PM         | Restored core dispatch rules and expanded state change validation |
+| 1.0     | 2026-05-17 | PM         | Initial draft incorporating runtime/worktree separation requirements |
 
 ## References
 - `docs/governance/ELIS_PE_Operating_Protocol.md`
