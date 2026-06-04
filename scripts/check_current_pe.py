@@ -196,7 +196,9 @@ def _validate_engines(current: dict[str, str]) -> tuple[str, str]:
             f"'{current['validator-agentid']}'."
         )
     if impl_engine == val_engine:
-        raise ValueError("Implementer and validator must use opposite slots (different engines).")
+        raise ValueError(
+            "Implementer and validator must use opposite slots (different engines)."
+        )
 
     return impl_engine, val_engine
 
