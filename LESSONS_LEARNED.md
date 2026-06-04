@@ -456,3 +456,213 @@ All three layers must PASS for an infra agent to be considered model-registry-co
 **Error:** During model registry remediation, there was pressure to directly edit `openclaw.json` or agent `models.json` files to fix L2/L3 failures quickly. Direct mutation without a governed path risks JSON corruption, undocumented drift, and loss of backup/audit trail.
 
 **Rule added:** All OpenClaw runtime config changes must go through the OpenClaw CLI or API (e.g. `gateway config.schema.patch`, `--sync-agent-catalogue`). Direct file edits to `openclaw.json` are prohibited without explicit PM/Supervisor authorisation and a backup. The `--sync-agent-catalogue` mode was created specifically to satisfy this rule for L3 repairs. A follow-up PE should document this as a formal OpenClaw CLI/API-first rule in `AGENTS.md` or a dedicated governance document.
+
+---
+
+## LL-24 — PM_WRONG_RESPONSIBILITY_BOUNDARY — PM must not perform GitHub write operations
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Multiple (PM, GitHub Agent, implementers) |
+| AGENTS.md rule | §4.3 — PM coordinates; GitHub Agent executes |
+| Skill Pack rule | ELIS_GITHUB_PROTECTED_FILES_RULE (Rule 8); ELIS_GITHUB_NO_DIRECT_MAIN_PUSH_RULE (Rule 10) |
+
+**Error:** PM performed GitHub write operations (push, PR ops, merge actions) that belong to the GitHub Agent role. Agents edited governance files (`CURRENT_PE.md`, `AGENTS.md` governance sections) that are reserved for PM/PO editing.
+
+**Root cause:** The role boundary between PM coordination and GitHub Agent execution was documented but not yet enforced by deterministic preflight checks. Protected files had no automated scope-gate enforcement to detect non-PM edits.
+
+**Detection:** Scope diff (`git diff --name-status`) plus actor identity cross-reference; GitHub audit log for actor mismatch.
+
+**Prevention rule:** Any agent operating on files outside its role boundary must be blocked by scope-gate enforcement. PM must not execute git push, PR creation, merge, or label operations. Protected files list enforced via `check_protected_files_not_edited()` in the preflight script.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 8, Rule 10; `scripts/elis_github_ops_preflight.py` check_protected_files_not_edited()
+
+---
+
+## LL-25 — PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED — PM retains standing write access
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | PM / Infrastructure |
+| AGENTS.md rule | §4.3 — PM must not write to GitHub directly |
+| Skill Pack rule | ELIS_GITHUB_NO_MERGE_WITHOUT_PO_APPROVAL_RULE (Rule 11); ELIS_GITHUB_SAFE_ROLLBACK_RULE (Rule 13) |
+
+**Error:** PM retains standing GitHub write/merge capability via `gh` CLI auth and `git push` SSH access, despite the operating model stating PM must not write to GitHub directly. This creates a structural risk: a PM session could inadvertently push, merge, or create PRs outside the governed GitHub Agent path.
+
+**Root cause:** The PM identity was set up with full write credentials during initial GitHub integration. No dedicated PE was scoped to restrict PM capability to a documented break-glass path.
+
+**Detection:** Read-only audit of PM GitHub-capable paths: `gh auth status`, `git remote get-url origin`, and SSH key existence. Evidence limited to paths and command availability — no credential content.
+
+**Prevention rule:** Record formal finding. Actual credential restriction/removal is deferred to PE-OPS-GITHUB-PERMISSIONS-01. The preflight script's `check_merge_approval()` detects PM capability paths and flags them.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 11; `docs/governance/ELIS_GitHub_Agent_Operating_Model.md` §1.3; `scripts/elis_github_ops_preflight.py` check_merge_approval()
+
+---
+
+## LL-26 — PE_BRANCH_LOCKED_BY_OTHER_WORKTREE — branch checked out in multiple worktrees
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Multiple (GitHub Agent, implementers) |
+| AGENTS.md rule | §3 — Worktree lifecycle; one PE = one branch |
+| Skill Pack rule | ELIS_GITHUB_BRANCH_LOCK_PREFLIGHT_RULE (Rule 2); ELIS_GITHUB_LINKED_WORKTREE_BRANCH_RELEASE_RULE (Rule 3) |
+
+**Error:** A branch needed for checkout was already checked out in a different Git worktree, preventing the checkout from succeeding. The linked worktree model means branches are exclusive to one worktree at a time.
+
+**Root cause:** No preflight check ran before `git checkout` to verify the target branch was not locked in another worktree. When multiple agents or the GitHub Agent need the same branch, the locking worktree must release it first.
+
+**Detection:** `git worktree list` shows the branch in a non-current worktree.
+
+**Prevention rule:** Run `check_branch_not_locked()` before every checkout. If locked, release via `ELIS_GITHUB_LINKED_WORKTREE_BRANCH_RELEASE_RULE` with PM/PO approval.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 2, Rule 3; `scripts/elis_github_ops_preflight.py` check_branch_not_locked()
+
+---
+
+## LL-27 — STALE_LOCAL_PE_BRANCH_HEAD — local branch behind origin/main
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Multiple |
+| AGENTS.md rule | §2.6 — rebase after every base-branch merge |
+| Skill Pack rule | ELIS_GITHUB_STALE_LOCAL_BRANCH_HEAD_RULE (Rule 4) |
+
+**Error:** The local PE feature branch was behind `origin/main`, meaning any push or PR creation would have incorporated stale code. Diverged branches (both ahead and behind) require rebase.
+
+**Root cause:** After another PR merged to `main`, the active feature branch was not rebased. No preflight check detected the staleness before push/PR operations.
+
+**Detection:** `git fetch origin` followed by `git rev-list --count --left-right origin/main..HEAD` shows behind count > 0.
+
+**Prevention rule:** Before any push or PR creation, fetch and check ahead/behind. If behind or diverged, rebase onto `origin/main` before proceeding. The preflight script's `check_local_branch_not_stale()` enforces this.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 4; `scripts/elis_github_ops_preflight.py` check_local_branch_not_stale()
+
+---
+
+## LL-28 — LOCAL_UNPUSHED_COMMITS_BLOCK_RESET — unpushed commits prevent workspace reset
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Multiple |
+| AGENTS.md rule | §2.5 — clean tree before context switch |
+| Skill Pack rule | ELIS_GITHUB_PUSH_PR_UPDATE_SKILL (Rule 5) |
+
+**Error:** Local commits existed on a branch that were not present on the remote, blocking workspace reset for a new PE. The agent could not switch contexts because unpushed changes would be lost.
+
+**Root cause:** Commits were made locally (as required) but not pushed before a reset was needed. The push step is PM/GitHub Agent-gated, creating a coordination gap: the implementer commits but cannot push, and the GitHub Agent may not push before the implementer signals readiness.
+
+**Detection:** `git log origin/<branch>..HEAD` returns non-empty.
+
+**Prevention rule:** Before workspace reset, check for unpushed commits. If present, either push (via GitHub Agent) or stash/archive the branch. The preflight script's `check_no_local_unpushed_commits()` detects this state.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 5; `scripts/elis_github_ops_preflight.py` check_no_local_unpushed_commits()
+
+---
+
+## LL-29 — STALE_CHECK_RUN_NOT_CURRENT_HEAD — CI feedback from wrong commit
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Multiple (GitHub Agent, implementers, validators) |
+| AGENTS.md rule | §2.4 — evidence-first; stale runs are not valid evidence |
+| Skill Pack rule | ELIS_GITHUB_CHECKS_MONITORING_SKILL (Rule 7); ELIS_GITHUB_PR_CREATION_SKILL (Rule 6) |
+
+**Error:** CI check runs existed but corresponded to an older commit SHA, not the current HEAD. A PR was created or a merge was evaluated based on stale CI feedback, giving a false sense of CI health.
+
+**Root cause:** CI runs are tied to the SHA at push time. After a rebase or force-push (by GitHub Agent), the old CI runs still show in the run list but are no longer relevant. The agent looked at the most recent runs without verifying they matched the current HEAD SHA.
+
+**Detection:** `gh run list --branch <branch>` filtered by SHA does not include current HEAD.
+
+**Prevention rule:** Before PR creation or merge evaluation, verify CI check runs are for the current HEAD SHA. The preflight script's `check_ci_status_current_head()` reports stale vs current runs.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 6, Rule 7; `scripts/elis_github_ops_preflight.py` check_ci_status_current_head()
+
+---
+
+## LL-30 — REVIEW_ARTEFACT_WRONG_PATH — REVIEW file in wrong directory
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Implementer / Validator |
+| AGENTS.md rule | §7 — file ownership by canonical paths |
+| Skill Pack rule | ELIS_GITHUB_PR_CLOSEOUT_PACKET_RULE (Rule 14) |
+
+**Error:** A REVIEW file was placed in a directory that did not match the governing standard (e.g. at repo root instead of inside `.elis/pe/<PE-ID>/`). This caused automated closeout tools to miss the artefact.
+
+**Root cause:** The canonical REVIEW path (`.elis/pe/<PE-ID>/REVIEW.md`) was documented but not enforced by any validation check. Agents placed REVIEW files where they were convenient rather than where the governance expects them.
+
+**Detection:** File path pattern match against `REVIEW_PE<N>.md` in the expected location vs actual location.
+
+**Prevention rule:** Before closeout, verify REVIEW files are at the canonical path. The preflight script's `check_review_artefact_path()` enforces this.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 14; `scripts/elis_github_ops_preflight.py` check_review_artefact_path()
+
+---
+
+## LL-31 — REVIEW_SCHEMA_NONCOMPLIANT — REVIEW file missing required sections
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Validator |
+| AGENTS.md rule | §2.4.1 — REVIEW must contain Evidence section with inline content |
+| Skill Pack rule | ELIS_GITHUB_PR_CLOSEOUT_PACKET_RULE (Rule 14) |
+
+**Error:** A REVIEW file was missing required sections (`### Evidence`, `### Verdict`, `### Failure classes addressed`) or had content that did not satisfy the governing schema. The missing Evidence section made the verdict unsupported and invalid per AGENTS.md §2.4.1.
+
+**Root cause:** The REVIEW schema requirements existed in AGENTS.md (§2.4.1) but were not checked by any automated validation. Validator could submit a noncompliant REVIEW that passed human review but failed structural checks.
+
+**Detection:** Schema validation check (grep for required headings) in the REVIEW file.
+
+**Prevention rule:** Before closeout, validate REVIEW files have all required headings and inline evidence. The preflight script's `check_review_schema()` enforces this.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 14; `scripts/elis_github_ops_preflight.py` check_review_schema()
+
+---
+
+## LL-32 — SECRET_OUTPUT_RISK — credential content leaked in evidence
+
+| Field | Value |
+|---|---|
+| First seen | PR #471 (2026-06-04) |
+| Agent | Multiple |
+| AGENTS.md rule | §13 — Secrets isolation; never print secret values |
+| Skill Pack rule | ELIS_GITHUB_NO_SECRET_OUTPUT_RULE (Rule 9) |
+
+**Error:** Evidence, diagnostic output, or status packets contained credential content, tokens, secret keys, or private key material. Even filtered output (e.g. `grep` on env vars) can expose full secret values.
+
+**Root cause:** Agents used diagnostic commands (`printenv`, `cat`, `gh auth status` with verbose output) that included credential content. No automated scan was in place to detect secrets before output was committed or sent.
+
+**Detection:** Pattern scan for `ghp_*`, `sk-*`, `BEGIN.*PRIVATE KEY`, file content from `/opt/elis/secrets/` paths.
+
+**Prevention rule:** Never include credential content in any output. Use existence checks only (`[ -n "$VAR" ] && echo set || echo unset`). The preflight script's `check_no_secret_output()` scans text for secret patterns before release.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 9; `scripts/elis_github_ops_preflight.py` check_no_secret_output()
+
+---
+
+## LL-33 — STALE_LOCAL_WORKSPACE_HEAD — fixed workspace base out of sync
+
+| Field | Value |
+|---|---|
+| First seen | Phase 1 discovery (PE-OPS-GITHUB-SKILLS-01, 2026-06-04) |
+| Agent | Multiple (fixed workspace agents) |
+| AGENTS.md rule | §2.6 — rebase after every base-branch merge; §3 — worktree lifecycle |
+| Skill Pack rule | ELIS_GITHUB_STALE_LOCAL_BRANCH_HEAD_RULE (Rule 4 — base-worktree sync subcase) |
+
+**Error:** The fixed agent workspace had a detached HEAD that was behind `origin/main`, causing base misalignment for any PE branch. When the workspace base is stale, feature branches rebased onto it carry the staleness forward.
+
+**Root cause:** The fixed workspace (e.g. `/opt/elis/agent-worktrees/infra-impl-b`) uses a detached HEAD to follow `main` without being on a branch. After a merge to `main`, the detached HEAD was not synced. This is a subcase of `STALE_LOCAL_PE_BRANCH_HEAD` specific to base worktrees.
+
+**Detection:** `git rev-list --count HEAD..origin/main` in detached HEAD state shows behind count > 0.
+
+**Prevention rule:** Before any PE work, check if the fixed workspace detached HEAD is current with `origin/main`. If behind, run `git switch --detach origin/main` to sync. Then rebase the PE feature branch. The preflight script's `check_local_branch_not_stale()` detects this state when HEAD is detached.
+
+**Reference:** `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` §Rule 4 (base-worktree sync subcase); `scripts/elis_github_ops_preflight.py` check_local_branch_not_stale()"}]

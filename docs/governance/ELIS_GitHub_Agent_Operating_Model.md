@@ -8,6 +8,54 @@
 ## 1. Purpose
 This document defines the GitHub Write Boundary Model for ELIS: the operating model that governs which roles may perform which GitHub write operations, under what gates, and with what approval. It supersedes ad-hoc permission patterns and codifies the boundary explicitly for every agent role.
 
+### 1.2 Deterministic Enforcement Reference
+
+The 14 skills and rules in `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md`
+constitute the **deterministic enforcement layer** for this operating model.
+Each rule in the skill pack maps to specific failure classes from the registry in
+`docs/ops/github-agent/GITHUB_AGENT_RULES.md` and provides executable check
+procedures, expected outputs, and failure responses.
+
+Where this operating model defines the *what* and *why* of GitHub write boundaries,
+the skill pack defines the *how* — the precise sequence of preflight checks,
+verification steps, and output evidence required for each operation.
+
+### 1.3 PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED — Formal Finding
+
+**Status:** Open — Finding recorded 2026-06-04
+**Source:** PE-OPS-GITHUB-SKILLS-01
+**Target PE for remediation:** PE-OPS-GITHUB-PERMISSIONS-01
+
+**Read-only audit:** A read-only audit of PM GitHub-capable paths was conducted
+as part of PE-OPS-GITHUB-SKILLS-01. The audit checked for the existence and type
+of GitHub write capabilities available to the PM role:
+
+| Capability Path | Availability | Notes |
+|----------------|-------------|-------|
+| `gh` CLI auth status | Present | `gh auth status` confirms a configured GitHub identity (identity not disclosed per §4.4b) |
+| `git push` over SSH | Present (via SSH agent) | SSH key at `~/.ssh/` allows push to `origin` |
+| `git push` over HTTPS | Present (via credential helper) | Git credential helper caches credentials |
+| `bin/gh-agent` | Executable but PM-prohibited | PM must not execute per operating model §4.4a |
+| GitHub PAT or token file | Present (file path known) | Path: known to PM infra; content not inspected per SECRET_OUTPUT_RISK rule |
+
+**Principle of audit:** This audit collected metadata only — file existence, command
+availability, permission class. No credential content, token values, file contents,
+or secret hashes were read or recorded. All evidence is limited to paths, command
+availability status, and permission class identifiers.
+
+**Target state:** PM should not retain standing GitHub write/merge capability except
+a documented, PO-approved break-glass path. Target state requirements:
+- PM `gh` auth is limited to read-only scope, or removed entirely
+- PM has no `git push` capability to the ELIS remote (via credential removal or
+  remote URL restriction to `--no-push`)
+- Break-glass path is documented, approved by PO, and logged when used
+  (including PO approval reference, exact command, SHA(s), rationale, timestamp,
+  and post-operation boundary reset confirmation)
+
+**Action taken in this PE:** Finding recorded in this section. Actual credential
+restriction or removal is **out of scope** and deferred to
+`PE-OPS-GITHUB-PERMISSIONS-01` by explicit plan instruction.
+
 ### 1.1 ELIS GitHub Identity / Actor Terminology
 
 The following table defines the canonical ELIS GitHub identity layer — the set of identities,
@@ -265,11 +313,14 @@ When automation fails:
 - `docs/governance/ELIS_PE_Dispatch_Checklist.md` (dispatch readiness)
 - `docs/decisions/ADR-011-github-actions-authority-for-portable-gates.md`
 - `docs/governance/ELIS_Discord_PO_PM_Checkpoint_Governance.md`
+- `docs/ops/github-agent/ELIS_GITHUB_OPS_SKILL_PACK.md` (deterministic enforcement reference)
+- `docs/ops/github-agent/GITHUB_AGENT_RULES.md` (failure class registry)
 
 ## 13. Version History
 
 | Version | Date       | Author | Changes |
 |---------|------------|--------|---------|
+| 1.4     | 2026-06-04 | infra-impl-b | Add §1.2 deterministic enforcement reference (skill pack); add §1.3 PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED formal finding with read-only audit table; update cross-references. |
 | 1.3     | 2026-06-01 | PM     | Clarify PR merge routing: GitHub Agent executes merges when PO-approved; PM must not execute `bin/gh-agent` locally or access credential files; Supervisor is escalation only. Update permission matrix PR merge row, §4.4, Allowed/Forbidden sections. |
 | 1.2     | 2026-05-07 | PM     | Add Supervisor role to permission matrix. Resolve PM GitHub write conflict: PM must not write to GitHub directly; only GitHub Agent may write after explicit PM/PO approval. Update Allowed/Forbidden sections. |
 | 1.1     | 2026-05-06 | PM     | Adopt fixed workspace model. Replace bot-centric model with role-based permission matrix. Clarify no-default-write principle. Gate 2 no longer auto-merges. |
