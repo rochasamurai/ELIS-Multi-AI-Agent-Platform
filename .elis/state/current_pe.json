@@ -1,12 +1,13 @@
 {
-  "current_state": "implementing",
-  "pe_id": "PE-OPS-GITHUB-IDENTITY-01",
-  "branch": "feature/pe-ops-github-identity-01-enforce-elis-github-production-identity",
-  "implementer": "infra-impl-b",
-  "validator": "infra-val-a",
-  "opened_at": "2026-06-02",
+  "current_state": "plan-complete",
+  "pe_id": null,
+  "branch": null,
+  "implementer": null,
+  "validator": null,
+  "opened_at": null,
   "base_branch": "main",
-  "starting_head": "449ef71d397ddf57df54b9a0301cf5dbd1f25cfe",
-  "risk_classification": "Strict/Security/GitHub-Identity/A2A-Integration",
-  "note": "Opened 2026-06-02. Scope: enforce ELIS GitHub production identity (app/elis-github); PM<->ELIS GitHub workflow via A2A; add github-agent as 4th A2A participant (request/report only). rochasamurai is not accepted as target identity — observed use classified as TEMPORARY_HUMAN_GITHUB_AUTH_RISK. No credential removal in this PE. Initial A2A tests use non-executable identity/status messages only. Live GitHub writes require separate PO approval."
+  "closed_pe": "PE-OPS-GITHUB-IDENTITY-01",
+  "closed_at": "2026-06-04",
+  "merge_commit": "72867391ccedabc964f33c7dfd26ee107b001875",
+  "note": "Gate 1 merged 2026-06-04. PR #470. Black failure waived (pre-existing, scripts/check_current_pe.py). Gate 2 and Gate 3 not started — require separate PO authorisation."
 }
