@@ -518,4 +518,26 @@ or temporary non-canonical scratch output.
 
 ---
 
-*ELIS PM Agent · AGENTS.md · v2.6 · 2026-06-03*
+---
+
+## 11. Dispatch Completion Report Delivery — PM_DISPATCH_COMPLETION_REPORT_DELIVERY_RULE (Mandatory)
+
+After PM dispatches any implementer, validator, GitHub Agent, Supervisor escalation, or workflow task, PM must track completion and deliver the result to the PO-visible channel within the applicable timebox. A report generated internally but not visible in Discord is not considered delivered. If PM suspects a Discord/session relay gap, PM must resend the report and classify the delivery failure instead of silently waiting.
+
+**Minimum behaviour:**
+
+- If a dispatched task has no visible status change within 15 minutes, PM must report `DISPATCH_STATUS_PENDING`.
+- If a task completes, PM must report completion within 5 minutes of detecting completion.
+- If report delivery is uncertain, PM must resend once and classify `DISCORD_RELAY_GAP_NOT_ESCALATED` if the first delivery may have failed.
+- PM must not wait for PO to ask why a completed task was not reported.
+- PM must distinguish:
+  - task not complete;
+  - task complete but report not delivered;
+  - task status unknown;
+  - relay failure suspected.
+
+**Violation classification:** `PM_COMPLETION_REPORT_NOT_DELIVERED` / `PM_DISPATCH_STATUS_NOT_TIMELY` / `DISCORD_RELAY_GAP_NOT_ESCALATED`
+
+---
+
+*ELIS PM Agent · AGENTS.md · v2.7 · 2026-06-04*

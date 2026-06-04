@@ -610,3 +610,28 @@ or temporary non-canonical scratch output.
 - Existing `.txt` files at `/home/samurai/.hermes/reports/` that predate this rule are classified as HISTORICAL_LEGACY_ONLY and do not require retroactive conversion unless they are the active canonical version of a current report.
 - `IMPLEMENTER_RESET_BINDING_ACK_REPORT_V3.txt` is superseded by `V3.md` (human-readable) and `V3.json` (machine-readable); the `.txt` path is retired.
 - New reports from PM, Supervisor, and Advisor must use `.md` or `.json` from the date this rule is active.
+
+---
+
+## PM_DISPATCH_COMPLETION_REPORT_DELIVERY_RULE
+
+After PM dispatches any implementer, validator, GitHub Agent, Supervisor escalation, or workflow task, PM must track completion and deliver the result to the PO-visible channel within the applicable timebox. A report generated internally but not visible in Discord is not considered delivered.
+
+**Required PM behaviour:**
+
+- If a dispatched task has no visible status change within 15 minutes, report `DISPATCH_STATUS_PENDING`.
+- If a task completes, report completion within 5 minutes of detecting completion.
+- If report delivery is uncertain, resend once and classify `DISCORD_RELAY_GAP_NOT_ESCALATED`.
+- PM must not wait for PO to ask why a completed task was not reported.
+- PM must distinguish: task not complete / task complete but report not delivered / task status unknown / relay failure suspected.
+
+### Violation classification
+
+- `PM_COMPLETION_REPORT_NOT_DELIVERED` — task completed but no PO-visible report was delivered
+- `PM_DISPATCH_STATUS_NOT_TIMELY` — report delivered more than 5 minutes after completion was detected
+- `DISCORD_RELAY_GAP_NOT_ESCALATED` — PM suspected a relay failure but did not resend or classify it
+
+### Enforcement
+
+- PM AGENTS.md §11 contains the PM-side operational form of this rule.
+- Violations must be self-reported in the next PM Status Packet and recorded in `LESSONS_LEARNED.md` if they cause a material delay.
