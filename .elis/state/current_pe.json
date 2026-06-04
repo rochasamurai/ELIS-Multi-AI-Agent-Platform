@@ -1,13 +1,13 @@
 {
-  "current_state": "plan-complete",
-  "pe_id": null,
-  "branch": null,
-  "implementer": null,
-  "validator": null,
-  "opened_at": null,
+  "current_state": "implementing",
+  "pe_id": "PE-OPS-GITHUB-IDENTITY-02",
+  "branch": "feature/pe-ops-github-identity-02-gate2-host-runtime-a2a-mailbox",
+  "implementer": "infra-impl-a",
+  "validator": "infra-val-b",
+  "opened_at": "2026-06-04",
   "base_branch": "main",
   "closed_pe": "PE-OPS-GITHUB-IDENTITY-01",
   "closed_at": "2026-06-04",
   "merge_commit": "72867391ccedabc964f33c7dfd26ee107b001875",
-  "note": "Gate 1 merged 2026-06-04. PR #470. Black failure waived (pre-existing, scripts/check_current_pe.py). Gate 2 and Gate 3 not started — require separate PO authorisation."
+  "note": "PE-OPS-GITHUB-IDENTITY-02 opened 2026-06-04. Gate 2 (host-runtime identity + A2A mailbox) and Gate 3 (read-only live validation) in scope. Gate 3 requires separate PO go-ahead after Gate 2 PASS. Implementer dispatch HELD — requires separate PO implementation dispatch approval."
 }
