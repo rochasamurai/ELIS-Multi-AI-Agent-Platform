@@ -38,7 +38,7 @@
 
 | PE-ID       | Domain          | Implementer-agentId  | Validator-agentId  | Branch                                            | Status          | Last-updated |
 |-------------|-----------------|----------------------|--------------------|---------------------------------------------------|-----------------|--------------|
-| PE-OPS-GITHUB-SKILLS-01 | github-skills | infra-impl-b | infra-val-a | feature/pe-ops-github-skills-01-github-operations-skill-pack | open | 2026-06-04 |
+| PE-OPS-GITHUB-SKILLS-01 | github-skills | infra-impl-b | infra-val-a | feature/pe-ops-github-skills-01-github-operations-skill-pack | gate-2-pending | 2026-06-05 |
 | PE-OPS-A2A-GATE-2B-01 | ops | infra-impl-a | infra-val-b | feature/pe-ops-a2a-gate-2b-01-activate-a2a-runtime-pm-supervisor-advisor | merged | 2026-06-02 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-02 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-02-rebuild-github-agent-worktree | merged | 2026-05-28 |
 | PE-OPS-GITHUB-AGENT-PRODUCTION-01 | github | infra-impl-b | infra-val-a | feature/pe-ops-github-agent-production-01-github-app-launcher | merged | 2026-05-27 |
