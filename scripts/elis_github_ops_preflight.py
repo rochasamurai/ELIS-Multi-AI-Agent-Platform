@@ -51,33 +51,36 @@ PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED = (
 REVIEW_ARTEFACT_WRONG_PATH = "REVIEW_ARTEFACT_WRONG_PATH"
 REVIEW_SCHEMA_NONCOMPLIANT = "REVIEW_SCHEMA_NONCOMPLIANT"
 
-ALL_FAILURE_CLASSES = frozenset({
-    WRONG_GITHUB_WORKTREE_OR_CLONE,
-    PE_BRANCH_LOCKED_BY_OTHER_WORKTREE,
-    STALE_LOCAL_PE_BRANCH_HEAD,
-    STALE_LOCAL_WORKSPACE_HEAD,
-    LOCAL_UNPUSHED_COMMITS_BLOCK_RESET,
-    STALE_CHECK_RUN_NOT_CURRENT_HEAD,
-    PM_WRONG_RESPONSIBILITY_BOUNDARY,
-    SECRET_OUTPUT_RISK,
-    PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED,
-    REVIEW_ARTEFACT_WRONG_PATH,
-    REVIEW_SCHEMA_NONCOMPLIANT,
-})
+ALL_FAILURE_CLASSES = frozenset(
+    {
+        WRONG_GITHUB_WORKTREE_OR_CLONE,
+        PE_BRANCH_LOCKED_BY_OTHER_WORKTREE,
+        STALE_LOCAL_PE_BRANCH_HEAD,
+        STALE_LOCAL_WORKSPACE_HEAD,
+        LOCAL_UNPUSHED_COMMITS_BLOCK_RESET,
+        STALE_CHECK_RUN_NOT_CURRENT_HEAD,
+        PM_WRONG_RESPONSIBILITY_BOUNDARY,
+        SECRET_OUTPUT_RISK,
+        PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED,
+        REVIEW_ARTEFACT_WRONG_PATH,
+        REVIEW_SCHEMA_NONCOMPLIANT,
+    }
+)
 
 
 # ── Secret patterns (no credential content may appear in output) ──────
 
 SECRET_PATTERNS = [
-    re.compile(r"gh[pousr]_[A-Za-z0-9_]{10,}"),     # GitHub tokens
-    re.compile(r"sk-[A-Za-z0-9]{20,}"),               # OpenAI / Anthropic keys
-    re.compile(r"-----BEGIN .* PRIVATE KEY-----"),     # Private key markers
-    re.compile(r"AKIA[0-9A-Z]{16}"),                   # AWS access keys
+    re.compile(r"gh[pousr]_[A-Za-z0-9_]{10,}"),  # GitHub tokens
+    re.compile(r"sk-[A-Za-z0-9]{20,}"),  # OpenAI / Anthropic keys
+    re.compile(r"-----BEGIN .* PRIVATE KEY-----"),  # Private key markers
+    re.compile(r"AKIA[0-9A-Z]{16}"),  # AWS access keys
     re.compile(r"(?i)(token|secret|password|apikey)\s*=\s*\S+"),  # env-style secrets
 ]
 
 
 # ── Git subprocess helpers ─────────────────────────────────────────────
+
 
 def _git_cmd(*args: str, cwd: str | Path | None = None) -> subprocess.CompletedProcess:
     """Run a git command and return the CompletedProcess."""
@@ -116,6 +119,7 @@ def _repo_remote() -> str:
 
 # ── Check 1: Worktree binding ──────────────────────────────────────────
 
+
 def check_worktree_binding(
     expected_path: str | None = None,
     expected_remote: str | None = None,
@@ -125,9 +129,7 @@ def check_worktree_binding(
     Returns a result dict with keys: check, class, status, detail.
     """
     if expected_path is None:
-        expected_path = os.environ.get(
-            "ELIS_EXPECTED_WORKTREE", os.getcwd()
-        )
+        expected_path = os.environ.get("ELIS_EXPECTED_WORKTREE", os.getcwd())
     if expected_remote is None:
         expected_remote = _repo_remote()
 
@@ -170,11 +172,16 @@ def check_worktree_binding(
         "check": "check_worktree_binding",
         "class": WRONG_GITHUB_WORKTREE_OR_CLONE,
         "status": status,
-        "detail": "; ".join(failures) if failures else "Worktree and remote match expected values",
+        "detail": (
+            "; ".join(failures)
+            if failures
+            else "Worktree and remote match expected values"
+        ),
     }
 
 
 # ── Check 2: Branch not locked in another worktree ─────────────────────
+
 
 def check_branch_not_locked(branch_name: str | None = None) -> dict:
     """Check git worktree list for the branch in another worktree.
@@ -220,16 +227,22 @@ def check_branch_not_locked(branch_name: str | None = None) -> dict:
         if wl_path == current_path:
             continue
         if branch_clean == branch_name or branch_name in branch_raw:
-            locked_entries.append({
-                "path": wl_path,
-                "branch": branch_raw,
-                "head": parts[1] if len(parts) > 1 else "",
-            })
+            locked_entries.append(
+                {
+                    "path": wl_path,
+                    "branch": branch_raw,
+                    "head": parts[1] if len(parts) > 1 else "",
+                }
+            )
 
     if locked_entries:
-        detail_parts = [f"Branch '{branch_name}' locked in {len(locked_entries)} worktree(s):"]
+        detail_parts = [
+            f"Branch '{branch_name}' locked in {len(locked_entries)} worktree(s):"
+        ]
         for entry in locked_entries:
-            detail_parts.append(f"  - {entry['path']} ({entry['branch']}, HEAD={entry['head'][:12]})")
+            detail_parts.append(
+                f"  - {entry['path']} ({entry['branch']}, HEAD={entry['head'][:12]})"
+            )
         return {
             "check": "check_branch_not_locked",
             "class": PE_BRANCH_LOCKED_BY_OTHER_WORKTREE,
@@ -246,6 +259,7 @@ def check_branch_not_locked(branch_name: str | None = None) -> dict:
 
 
 # ── Check 3: Local branch not stale ────────────────────────────────────
+
 
 def check_local_branch_not_stale(branch_name: str | None = None) -> dict:
     """Check if local branch is behind origin/main (stale).
@@ -285,7 +299,7 @@ def check_local_branch_not_stale(branch_name: str | None = None) -> dict:
                 "class": STALE_LOCAL_WORKSPACE_HEAD,
                 "status": "FAIL",
                 "detail": f"Detached HEAD is {behind_count} commit(s) behind origin/main. "
-                          f"Run 'git switch --detach origin/main' to sync.",
+                f"Run 'git switch --detach origin/main' to sync.",
             }
         return {
             "check": "check_local_branch_not_stale",
@@ -330,7 +344,7 @@ def check_local_branch_not_stale(branch_name: str | None = None) -> dict:
             "class": STALE_LOCAL_PE_BRANCH_HEAD,
             "status": "FAIL",
             "detail": f"Branch '{branch_name}' has diverged: {ahead} ahead, {behind} behind. "
-                      f"Run 'git rebase origin/main'.",
+            f"Run 'git rebase origin/main'.",
         }
     if behind > 0:
         return {
@@ -338,7 +352,7 @@ def check_local_branch_not_stale(branch_name: str | None = None) -> dict:
             "class": STALE_LOCAL_PE_BRANCH_HEAD,
             "status": "FAIL",
             "detail": f"Branch '{branch_name}' is {behind} commit(s) behind origin/main. "
-                      f"Run 'git rebase origin/main'.",
+            f"Run 'git rebase origin/main'.",
         }
 
     return {
@@ -350,6 +364,7 @@ def check_local_branch_not_stale(branch_name: str | None = None) -> dict:
 
 
 # ── Check 4: No local unpushed commits ─────────────────────────────────
+
 
 def check_no_local_unpushed_commits() -> dict:
     """Check for commits on local branch not present on origin."""
@@ -389,8 +404,8 @@ def check_no_local_unpushed_commits() -> dict:
             "check": "check_no_local_unpushed_commits",
             "class": LOCAL_UNPUSHED_COMMITS_BLOCK_RESET,
             "status": "FAIL",
-            "detail": f"{len(unpushed)} unpushed commit(s) on '{branch_name}':\n" +
-                      "\n".join(unpushed),
+            "detail": f"{len(unpushed)} unpushed commit(s) on '{branch_name}':\n"
+            + "\n".join(unpushed),
         }
 
     return {
@@ -402,6 +417,7 @@ def check_no_local_unpushed_commits() -> dict:
 
 
 # ── Check 5: CI status on current HEAD ─────────────────────────────────
+
 
 def check_ci_status_current_head(
     repo: str = "rochasamurai/ELIS-Multi-AI-Agent-Platform",
@@ -428,11 +444,16 @@ def check_ci_status_current_head(
 
     # Use gh CLI read-only to list runs
     gh_result = _gh_cmd(
-        "run", "list",
-        "--repo", repo,
-        "--branch", branch,
-        "--limit", "20",
-        "--json", "headSha,databaseId,event,conclusion,workflowName,displayTitle",
+        "run",
+        "list",
+        "--repo",
+        repo,
+        "--branch",
+        branch,
+        "--limit",
+        "20",
+        "--json",
+        "headSha,databaseId,event,conclusion,workflowName,displayTitle",
     )
     if gh_result.returncode != 0:
         return {
@@ -490,10 +511,14 @@ def check_ci_status_current_head(
 
     # Check if all required runs on current HEAD pass
     failed_current = [
-        r for r in current_head_runs if "conclusion=failure" in r or "conclusion=cancelled" in r
+        r
+        for r in current_head_runs
+        if "conclusion=failure" in r or "conclusion=cancelled" in r
     ]
     if failed_current:
-        report_lines.append(f"\n{len(failed_current)} run(s) on current HEAD have failed/cancelled")
+        report_lines.append(
+            f"\n{len(failed_current)} run(s) on current HEAD have failed/cancelled"
+        )
         return {
             "check": "check_ci_status_current_head",
             "class": STALE_CHECK_RUN_NOT_CURRENT_HEAD,
@@ -511,13 +536,15 @@ def check_ci_status_current_head(
 
 # ── Check 6: Protected files not edited by wrong actor ─────────────────
 
-PROTECTED_FILES = frozenset({
-    "CURRENT_PE.md",
-    "AGENTS.md",
-    "docs/governance/ELIS_GitHub_Agent_Operating_Model.md",
-    "docs/governance/ELIS_PE_Operating_Protocol.md",
-    "docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md",
-})
+PROTECTED_FILES = frozenset(
+    {
+        "CURRENT_PE.md",
+        "AGENTS.md",
+        "docs/governance/ELIS_GitHub_Agent_Operating_Model.md",
+        "docs/governance/ELIS_PE_Operating_Protocol.md",
+        "docs/governance/ELIS_Agent_Dispatch_Binding_and_Validation_Rules.md",
+    }
+)
 
 
 def check_protected_files_not_edited(
@@ -558,7 +585,8 @@ def check_protected_files_not_edited(
             "check": "check_protected_files_not_edited",
             "class": PM_WRONG_RESPONSIBILITY_BOUNDARY,
             "status": "FAIL",
-            "detail": "Protected files modified in this branch:\n" + "\n".join(modified_protected),
+            "detail": "Protected files modified in this branch:\n"
+            + "\n".join(modified_protected),
         }
 
     return {
@@ -571,6 +599,7 @@ def check_protected_files_not_edited(
 
 # ── Check 7: No secret output ──────────────────────────────────────────
 
+
 def check_no_secret_output(text: str | None = None) -> dict:
     """Scan text for secret patterns. If text is None, read from stdin."""
     if text is None:
@@ -580,17 +609,21 @@ def check_no_secret_output(text: str | None = None) -> dict:
     for pattern in SECRET_PATTERNS:
         for match in pattern.finditer(text):
             # Only record the pattern type, not the matched value
-            matches_found.append(f"  Pattern matched: {pattern.pattern[:40]}... (REDACTED)")
+            matches_found.append(
+                f"  Pattern matched: {pattern.pattern[:40]}... (REDACTED)"
+            )
 
     if matches_found:
-        unique_patterns = list(dict.fromkeys(matches_found))  # deduplicate preserving order
+        unique_patterns = list(
+            dict.fromkeys(matches_found)
+        )  # deduplicate preserving order
         return {
             "check": "check_no_secret_output",
             "class": SECRET_OUTPUT_RISK,
             "status": "FAIL",
-            "detail": f"Secret pattern(s) detected ({len(unique_patterns)} unique):\n" +
-                      "\n".join(unique_patterns) +
-                      "\nAction: Redact and retry without credential content.",
+            "detail": f"Secret pattern(s) detected ({len(unique_patterns)} unique):\n"
+            + "\n".join(unique_patterns)
+            + "\nAction: Redact and retry without credential content.",
         }
 
     return {
@@ -602,6 +635,7 @@ def check_no_secret_output(text: str | None = None) -> dict:
 
 
 # ── Check 8: Merge approval check ──────────────────────────────────────
+
 
 def check_merge_approval(
     repo: str = "rochasamurai/ELIS-Multi-AI-Agent-Platform",
@@ -624,7 +658,9 @@ def check_merge_approval(
 
     git_push_check = subprocess.run(
         ["git", "remote", "get-url", "origin"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     if git_push_check.returncode == 0:
         pm_capable_paths.append("git remote origin configured (path exists)")
@@ -633,17 +669,21 @@ def check_merge_approval(
         failures.append(
             "PM capability path(s) detected — "
             "PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED finding applies. "
-            "Evidence (metadata only, no credential content):\n" +
-            "\n".join(f"  - {p}" for p in pm_capable_paths) +
-            "\nDefer credential restriction to PE-OPS-GITHUB-PERMISSIONS-01."
+            "Evidence (metadata only, no credential content):\n"
+            + "\n".join(f"  - {p}" for p in pm_capable_paths)
+            + "\nDefer credential restriction to PE-OPS-GITHUB-PERMISSIONS-01."
         )
 
     if pr_number is not None:
         # Check labels
         label_result = _gh_cmd(
-            "pr", "view", str(pr_number),
-            "--repo", repo,
-            "--json", "labels,mergeStateStatus",
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            repo,
+            "--json",
+            "labels,mergeStateStatus",
         )
         if label_result.returncode == 0:
             try:
@@ -655,7 +695,9 @@ def check_merge_approval(
                     )
                 merge_state = pr_data.get("mergeStateStatus", "")
                 if merge_state not in ("CLEAN", "UNKNOWN", None):
-                    failures.append(f"PR merge state is '{merge_state}' (expected CLEAN)")
+                    failures.append(
+                        f"PR merge state is '{merge_state}' (expected CLEAN)"
+                    )
             except (json.JSONDecodeError, ValueError):
                 failures.append("Cannot parse PR metadata")
 
@@ -673,7 +715,7 @@ def check_merge_approval(
         "class": PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED,
         "status": "PASS",
         "detail": "Merge approval preflight passed — no pm-review-required label, "
-                  "no PM capability paths detected",
+        "no PM capability paths detected",
     }
 
 
@@ -711,8 +753,8 @@ def check_review_artefact_path(
             "check": "check_review_artefact_path",
             "class": REVIEW_ARTEFACT_WRONG_PATH,
             "status": "FAIL",
-            "detail": f"REVIEW file(s) at wrong path ({len(wrong_path_reviews)}):\n" +
-                      "\n".join(f"  - {p}" for p in wrong_path_reviews),
+            "detail": f"REVIEW file(s) at wrong path ({len(wrong_path_reviews)}):\n"
+            + "\n".join(f"  - {p}" for p in wrong_path_reviews),
         }
 
     return {
@@ -725,7 +767,11 @@ def check_review_artefact_path(
 
 # ── Check 10: REVIEW schema compliance ─────────────────────────────────
 
-REVIEW_REQUIRED_HEADINGS = ["### Evidence", "### Verdict", "### Failure classes addressed"]
+REVIEW_REQUIRED_HEADINGS = [
+    "### Evidence",
+    "### Verdict",
+    "### Failure classes addressed",
+]
 
 
 def check_review_schema(
@@ -797,25 +843,33 @@ def run_all_checks(
     results: list[dict] = []
     for name in checks_to_run:
         if name not in ALL_CHECKS:
-            results.append({
-                "check": name,
-                "class": "UNKNOWN_CHECK",
-                "status": "FAIL",
-                "detail": f"Unknown check: '{name}'",
-            })
+            results.append(
+                {
+                    "check": name,
+                    "class": "UNKNOWN_CHECK",
+                    "status": "FAIL",
+                    "detail": f"Unknown check: '{name}'",
+                }
+            )
             continue
 
         try:
             fn = ALL_CHECKS[name]
-            result = fn(**kwargs.get(name, {})) if isinstance(kwargs.get(name), dict) else fn()
+            result = (
+                fn(**kwargs.get(name, {}))
+                if isinstance(kwargs.get(name), dict)
+                else fn()
+            )
             results.append(result)
         except Exception as exc:
-            results.append({
-                "check": name,
-                "class": "EXCEPTION",
-                "status": "FAIL",
-                "detail": f"Exception: {exc}",
-            })
+            results.append(
+                {
+                    "check": name,
+                    "class": "EXCEPTION",
+                    "status": "FAIL",
+                    "detail": f"Exception: {exc}",
+                }
+            )
 
     return results
 
@@ -863,7 +917,9 @@ def main() -> int:
     # Build kwargs per check
     kwargs = {}
     if args.expected_worktree:
-        kwargs.setdefault("worktree_binding", {})["expected_path"] = args.expected_worktree
+        kwargs.setdefault("worktree_binding", {})[
+            "expected_path"
+        ] = args.expected_worktree
     if args.pe_id:
         kwargs.setdefault("review_artefact_path", {})["pe_id"] = args.pe_id
         kwargs.setdefault("review_schema", {})["pe_id"] = args.pe_id
@@ -883,7 +939,9 @@ def main() -> int:
         print(f"ELIS GitHub Ops Preflight — {len(results)} check(s)")
         print("=" * 60)
         for r in results:
-            symbol = "✓" if r["status"] == "PASS" else "⚠" if r["status"] == "WARN" else "✗"
+            symbol = (
+                "✓" if r["status"] == "PASS" else "⚠" if r["status"] == "WARN" else "✗"
+            )
             print(f"\n[{symbol}] {r['check']} ({r['class']}) — {r['status']}")
             for line in r["detail"].split("\n"):
                 print(f"     {line}")

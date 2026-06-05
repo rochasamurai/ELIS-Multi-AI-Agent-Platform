@@ -13,16 +13,16 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "elis_github_ops_preflight.py"
+SCRIPT = (
+    Path(__file__).resolve().parents[1] / "scripts" / "elis_github_ops_preflight.py"
+)
 
 
 def _load():
     """Import the module fresh."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location(
-        "elis_github_ops_preflight", SCRIPT
-    )
+    spec = importlib.util.spec_from_file_location("elis_github_ops_preflight", SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -36,6 +36,7 @@ MODULE = _load()
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 
+
 def _make_completed(returncode=0, stdout="", stderr=""):
     """Create a subprocess.CompletedProcess-like mock."""
     cp = MagicMock(spec=subprocess.CompletedProcess)
@@ -46,6 +47,7 @@ def _make_completed(returncode=0, stdout="", stderr=""):
 
 
 # ── Test 1: check_worktree_binding → WRONG_GITHUB_WORKTREE_OR_CLONE ────
+
 
 class TestCheckWorktreeBinding:
     """Check 1 — WRONG_GITHUB_WORKTREE_OR_CLONE."""
@@ -84,7 +86,10 @@ class TestCheckWorktreeBinding:
             with patch.object(MODULE, "_git_cmd") as mock_git:
                 mock_git.side_effect = [
                     _make_completed(returncode=0, stdout=wrong_path),
-                    _make_completed(returncode=0, stdout="https://github.com/rochasamurai/ELIS-Multi-AI-Agent-Platform.git"),
+                    _make_completed(
+                        returncode=0,
+                        stdout="https://github.com/rochasamurai/ELIS-Multi-AI-Agent-Platform.git",
+                    ),
                 ]
                 result = MODULE.check_worktree_binding(
                     expected_path=expected_path,
@@ -96,7 +101,9 @@ class TestCheckWorktreeBinding:
 
     def test_fail_wrong_remote(self, monkeypatch):
         """When remote does not match expected, should FAIL."""
-        monkeypatch.setattr("os.getcwd", lambda: "/opt/elis/agent-worktrees/github-agent")
+        monkeypatch.setattr(
+            "os.getcwd", lambda: "/opt/elis/agent-worktrees/github-agent"
+        )
         monkeypatch.chdir("/opt/elis/agent-worktrees/github-agent")
         with patch.object(Path, "resolve") as mock_resolve:
             mock_resolve.return_value = Path("/opt/elis/agent-worktrees/github-agent")
@@ -116,6 +123,7 @@ class TestCheckWorktreeBinding:
 
 # ── Test 2: check_branch_not_locked → PE_BRANCH_LOCKED_BY_OTHER_WORKTREE ─
 
+
 class TestCheckBranchNotLocked:
     """Check 2 — PE_BRANCH_LOCKED_BY_OTHER_WORKTREE."""
 
@@ -125,11 +133,13 @@ class TestCheckBranchNotLocked:
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.side_effect = [
                 _make_completed(stdout="feature/pe-test"),
-                _make_completed(stdout=(
-                    "/opt/elis/repo/.bare   (bare)\n"
-                    "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [feature/pe-test]\n"
-                    "/opt/elis/agent-worktrees/github-agent  43f1c22 [main]\n"
-                )),
+                _make_completed(
+                    stdout=(
+                        "/opt/elis/repo/.bare   (bare)\n"
+                        "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [feature/pe-test]\n"
+                        "/opt/elis/agent-worktrees/github-agent  43f1c22 [main]\n"
+                    )
+                ),
             ]
             result = MODULE.check_branch_not_locked("feature/pe-test")
         assert result["status"] == "PASS"
@@ -138,11 +148,13 @@ class TestCheckBranchNotLocked:
         """When branch exists in another worktree, should FAIL."""
         monkeypatch.chdir("/opt/elis/agent-worktrees/infra-impl-b")
         with patch.object(MODULE, "_git_cmd") as mock_git:
-            mock_git.return_value = _make_completed(stdout=(
-                "/opt/elis/repo/.bare   (bare)\n"
-                "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [main]\n"
-                "/opt/elis/agent-worktrees/infra-val-a  3d27684 [feature/pe-locked]\n"
-            ))
+            mock_git.return_value = _make_completed(
+                stdout=(
+                    "/opt/elis/repo/.bare   (bare)\n"
+                    "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [main]\n"
+                    "/opt/elis/agent-worktrees/infra-val-a  3d27684 [feature/pe-locked]\n"
+                )
+            )
             result = MODULE.check_branch_not_locked("feature/pe-locked")
         assert result["status"] == "FAIL"
         assert result["class"] == MODULE.PE_BRANCH_LOCKED_BY_OTHER_WORKTREE
@@ -154,17 +166,20 @@ class TestCheckBranchNotLocked:
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.side_effect = [
                 _make_completed(stdout="feature/pe-test"),
-                _make_completed(stdout=(
-                    "/opt/elis/repo/.bare   (bare)\n"
-                    "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [feature/pe-test]\n"
-                    "/opt/elis/agent-worktrees/github-agent  43f1c22 [main]\n"
-                )),
+                _make_completed(
+                    stdout=(
+                        "/opt/elis/repo/.bare   (bare)\n"
+                        "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [feature/pe-test]\n"
+                        "/opt/elis/agent-worktrees/github-agent  43f1c22 [main]\n"
+                    )
+                ),
             ]
             result = MODULE.check_branch_not_locked("feature/pe-test")
         assert result["status"] == "PASS"
 
 
 # ── Test 3: check_local_branch_not_stale → STALE_LOCAL_PE_BRANCH_HEAD ──
+
 
 class TestCheckLocalBranchNotStale:
     """Check 3 — STALE_LOCAL_PE_BRANCH_HEAD + STALE_LOCAL_WORKSPACE_HEAD."""
@@ -228,6 +243,7 @@ class TestCheckLocalBranchNotStale:
 
 # ── Test 4: check_no_local_unpushed_commits → LOCAL_UNPUSHED_COMMITS_BLOCK_RESET ──
 
+
 class TestCheckNoLocalUnpushedCommits:
     """Check 4 — LOCAL_UNPUSHED_COMMITS_BLOCK_RESET."""
 
@@ -246,10 +262,9 @@ class TestCheckNoLocalUnpushedCommits:
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.side_effect = [
                 _make_completed(stdout="feature/pe-test"),
-                _make_completed(stdout=(
-                    "abc1234 First commit\n"
-                    "def5678 Second commit\n"
-                )),
+                _make_completed(
+                    stdout=("abc1234 First commit\n" "def5678 Second commit\n")
+                ),
             ]
             result = MODULE.check_no_local_unpushed_commits()
         assert result["status"] == "FAIL"
@@ -277,6 +292,7 @@ class TestCheckNoLocalUnpushedCommits:
 
 # ── Test 5: check_ci_status_current_head → STALE_CHECK_RUN_NOT_CURRENT_HEAD ──
 
+
 class TestCheckCiStatusCurrentHead:
     """Check 5 — STALE_CHECK_RUN_NOT_CURRENT_HEAD."""
 
@@ -285,20 +301,26 @@ class TestCheckCiStatusCurrentHead:
         head_sha = "abc1234def5678abc1234def5678abc1234def56"
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.side_effect = [
-                _make_completed(stdout=head_sha),   # rev-parse HEAD
-                _make_completed(stdout="feature/pe-test"),  # rev-parse --abbrev-ref HEAD
+                _make_completed(stdout=head_sha),  # rev-parse HEAD
+                _make_completed(
+                    stdout="feature/pe-test"
+                ),  # rev-parse --abbrev-ref HEAD
             ]
         with patch.object(MODULE, "_gh_cmd") as mock_gh:
-            mock_gh.return_value = _make_completed(stdout=json.dumps([
-                {
-                    "headSha": head_sha,
-                    "databaseId": 1001,
-                    "event": "push",
-                    "conclusion": "success",
-                    "workflowName": "CI",
-                    "displayTitle": "CI run",
-                },
-            ]))
+            mock_gh.return_value = _make_completed(
+                stdout=json.dumps(
+                    [
+                        {
+                            "headSha": head_sha,
+                            "databaseId": 1001,
+                            "event": "push",
+                            "conclusion": "success",
+                            "workflowName": "CI",
+                            "displayTitle": "CI run",
+                        },
+                    ]
+                )
+            )
             result = MODULE.check_ci_status_current_head(expected_sha=head_sha)
         assert result["status"] == "PASS"
 
@@ -311,16 +333,20 @@ class TestCheckCiStatusCurrentHead:
                 _make_completed(stdout="feature/pe-test"),
             ]
         with patch.object(MODULE, "_gh_cmd") as mock_gh:
-            mock_gh.return_value = _make_completed(stdout=json.dumps([
-                {
-                    "headSha": "oldsha00000000000000000000000000000000000",
-                    "databaseId": 999,
-                    "event": "push",
-                    "conclusion": "success",
-                    "workflowName": "CI",
-                    "displayTitle": "Old run",
-                },
-            ]))
+            mock_gh.return_value = _make_completed(
+                stdout=json.dumps(
+                    [
+                        {
+                            "headSha": "oldsha00000000000000000000000000000000000",
+                            "databaseId": 999,
+                            "event": "push",
+                            "conclusion": "success",
+                            "workflowName": "CI",
+                            "displayTitle": "Old run",
+                        },
+                    ]
+                )
+            )
             result = MODULE.check_ci_status_current_head(expected_sha=head_sha)
         assert result["status"] == "FAIL"
         assert result["class"] == MODULE.STALE_CHECK_RUN_NOT_CURRENT_HEAD
@@ -334,27 +360,32 @@ class TestCheckCiStatusCurrentHead:
                 _make_completed(stdout="feature/pe-test"),
             ]
         with patch.object(MODULE, "_gh_cmd") as mock_gh:
-            mock_gh.return_value = _make_completed(stdout=json.dumps([
-                {
-                    "headSha": head_sha,
-                    "databaseId": 1001,
-                    "event": "push",
-                    "conclusion": "success",
-                    "workflowName": "CI",
-                },
-                {
-                    "headSha": "oldsha00000000000000000000000000000000000",
-                    "databaseId": 999,
-                    "event": "push",
-                    "conclusion": "success",
-                    "workflowName": "Old CI",
-                },
-            ]))
+            mock_gh.return_value = _make_completed(
+                stdout=json.dumps(
+                    [
+                        {
+                            "headSha": head_sha,
+                            "databaseId": 1001,
+                            "event": "push",
+                            "conclusion": "success",
+                            "workflowName": "CI",
+                        },
+                        {
+                            "headSha": "oldsha00000000000000000000000000000000000",
+                            "databaseId": 999,
+                            "event": "push",
+                            "conclusion": "success",
+                            "workflowName": "Old CI",
+                        },
+                    ]
+                )
+            )
             result = MODULE.check_ci_status_current_head(expected_sha=head_sha)
         assert result["status"] == "WARN"
 
 
 # ── Test 6: check_protected_files_not_edited → PM_WRONG_RESPONSIBILITY_BOUNDARY ──
+
 
 class TestCheckProtectedFilesNotEdited:
     """Check 6 — PM_WRONG_RESPONSIBILITY_BOUNDARY."""
@@ -362,20 +393,21 @@ class TestCheckProtectedFilesNotEdited:
     def test_pass_no_protected_files(self, monkeypatch):
         """When no protected files in diff, should PASS."""
         with patch.object(MODULE, "_git_cmd") as mock_git:
-            mock_git.return_value = _make_completed(stdout=(
-                "M\tscripts/elis_github_ops_preflight.py\n"
-                "A\ttests/test_github_ops_preflight.py\n"
-            ))
+            mock_git.return_value = _make_completed(
+                stdout=(
+                    "M\tscripts/elis_github_ops_preflight.py\n"
+                    "A\ttests/test_github_ops_preflight.py\n"
+                )
+            )
             result = MODULE.check_protected_files_not_edited()
         assert result["status"] == "PASS"
 
     def test_fail_protected_file_modified(self, monkeypatch):
         """When a protected file is in diff, should FAIL."""
         with patch.object(MODULE, "_git_cmd") as mock_git:
-            mock_git.return_value = _make_completed(stdout=(
-                "M\tCURRENT_PE.md\n"
-                "M\tscripts/some_code.py\n"
-            ))
+            mock_git.return_value = _make_completed(
+                stdout=("M\tCURRENT_PE.md\n" "M\tscripts/some_code.py\n")
+            )
             result = MODULE.check_protected_files_not_edited()
         assert result["status"] == "FAIL"
         assert result["class"] == MODULE.PM_WRONG_RESPONSIBILITY_BOUNDARY
@@ -384,9 +416,9 @@ class TestCheckProtectedFilesNotEdited:
     def test_fail_protected_file_in_subdir(self, monkeypatch):
         """When protected file with subdir path is in diff, should FAIL."""
         with patch.object(MODULE, "_git_cmd") as mock_git:
-            mock_git.return_value = _make_completed(stdout=(
-                "M\tdocs/governance/ELIS_GitHub_Agent_Operating_Model.md\n"
-            ))
+            mock_git.return_value = _make_completed(
+                stdout=("M\tdocs/governance/ELIS_GitHub_Agent_Operating_Model.md\n")
+            )
             result = MODULE.check_protected_files_not_edited(
                 protected_list=["ELIS_GitHub_Agent_Operating_Model.md"]
             )
@@ -396,12 +428,15 @@ class TestCheckProtectedFilesNotEdited:
 
 # ── Test 7: check_no_secret_output → SECRET_OUTPUT_RISK ────────────────
 
+
 class TestCheckNoSecretOutput:
     """Check 7 — SECRET_OUTPUT_RISK."""
 
     def test_pass_clean_text(self):
         """When no secret patterns in text, should PASS."""
-        result = MODULE.check_no_secret_output("This is a normal log message\nNo secrets here\n")
+        result = MODULE.check_no_secret_output(
+            "This is a normal log message\nNo secrets here\n"
+        )
         assert result["status"] == "PASS"
 
     def test_fail_github_token(self):
@@ -414,7 +449,9 @@ class TestCheckNoSecretOutput:
 
     def test_fail_private_key_marker(self):
         """When text contains a private key marker, should FAIL."""
-        text = "-----BEGIN RSA PRIVATE KEY-----\nbase64data\n-----END RSA PRIVATE KEY-----"
+        text = (
+            "-----BEGIN RSA PRIVATE KEY-----\nbase64data\n-----END RSA PRIVATE KEY-----"
+        )
         result = MODULE.check_no_secret_output(text)
         assert result["status"] == "FAIL"
         assert result["class"] == MODULE.SECRET_OUTPUT_RISK
@@ -428,6 +465,7 @@ class TestCheckNoSecretOutput:
 
 
 # ── Test 8: check_merge_approval → PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED ──
+
 
 class TestCheckMergeApproval:
     """Check 8 — PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED."""
@@ -446,7 +484,9 @@ class TestCheckMergeApproval:
         """When PM gh auth is detected, should FAIL."""
         with patch.object(subprocess, "run") as mock_run:
             mock_run.side_effect = [
-                _make_completed(stdout="Logged in to github.com as rochasamurai"),  # gh auth
+                _make_completed(
+                    stdout="Logged in to github.com as rochasamurai"
+                ),  # gh auth
                 _make_completed(returncode=128, stderr="not a git repo"),
             ]
             result = MODULE.check_merge_approval()
@@ -463,15 +503,20 @@ class TestCheckMergeApproval:
                 _make_completed(returncode=128, stderr="not a git repo"),
             ]
         with patch.object(MODULE, "_gh_cmd") as mock_gh:
-            mock_gh.return_value = _make_completed(stdout=json.dumps({
-                "labels": [{"name": "pm-review-required"}],
-                "mergeStateStatus": "CLEAN",
-            }))
+            mock_gh.return_value = _make_completed(
+                stdout=json.dumps(
+                    {
+                        "labels": [{"name": "pm-review-required"}],
+                        "mergeStateStatus": "CLEAN",
+                    }
+                )
+            )
             result = MODULE.check_merge_approval(pr_number=42)
         assert result["status"] == "FAIL"
 
 
 # ── Test 9: check_review_artefact_path → REVIEW_ARTEFACT_WRONG_PATH ────
+
 
 class TestCheckReviewArtefactPath:
     """Check 9 — REVIEW_ARTEFACT_WRONG_PATH."""
@@ -501,6 +546,7 @@ class TestCheckReviewArtefactPath:
 
 
 # ── Test 10: check_review_schema → REVIEW_SCHEMA_NONCOMPLIANT ──────────
+
 
 class TestCheckReviewSchema:
     """Check 10 — REVIEW_SCHEMA_NONCOMPLIANT."""
@@ -539,6 +585,7 @@ class TestCheckReviewSchema:
 
 # ── Test 11: Unified runner ────────────────────────────────────────────
 
+
 class TestRunAllChecks:
     """Integration-level tests for run_all_checks."""
 
@@ -563,13 +610,16 @@ class TestRunAllChecks:
         """When all checks pass, main() should return 0."""
         monkeypatch.setattr("sys.argv", ["prog", "--checks", "worktree_binding"])
         monkeypatch.setattr(
-            MODULE, "run_all_checks",
-            lambda *a, **kw: [{
-                "check": "test",
-                "class": "TEST",
-                "status": "PASS",
-                "detail": "OK",
-            }],
+            MODULE,
+            "run_all_checks",
+            lambda *a, **kw: [
+                {
+                    "check": "test",
+                    "class": "TEST",
+                    "status": "PASS",
+                    "detail": "OK",
+                }
+            ],
         )
         ec = MODULE.main()
         assert ec == 0
@@ -578,19 +628,23 @@ class TestRunAllChecks:
         """When any check fails, main() should return 1."""
         monkeypatch.setattr("sys.argv", ["prog", "--checks", "worktree_binding"])
         monkeypatch.setattr(
-            MODULE, "run_all_checks",
-            lambda *a, **kw: [{
-                "check": "test",
-                "class": "TEST",
-                "status": "FAIL",
-                "detail": "Failed",
-            }],
+            MODULE,
+            "run_all_checks",
+            lambda *a, **kw: [
+                {
+                    "check": "test",
+                    "class": "TEST",
+                    "status": "FAIL",
+                    "detail": "Failed",
+                }
+            ],
         )
         ec = MODULE.main()
         assert ec == 1
 
 
 # ── Test: ALL_FAILURE_CLASSES set ──────────────────────────────────────
+
 
 class TestFailureClassConstants:
     """Verify ALL_FAILURE_CLASSES contains all 11 classes."""
@@ -606,12 +660,16 @@ class TestFailureClassConstants:
         assert MODULE.STALE_CHECK_RUN_NOT_CURRENT_HEAD in MODULE.ALL_FAILURE_CLASSES
         assert MODULE.PM_WRONG_RESPONSIBILITY_BOUNDARY in MODULE.ALL_FAILURE_CLASSES
         assert MODULE.SECRET_OUTPUT_RISK in MODULE.ALL_FAILURE_CLASSES
-        assert MODULE.PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED in MODULE.ALL_FAILURE_CLASSES
+        assert (
+            MODULE.PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED
+            in MODULE.ALL_FAILURE_CLASSES
+        )
         assert MODULE.REVIEW_ARTEFACT_WRONG_PATH in MODULE.ALL_FAILURE_CLASSES
         assert MODULE.REVIEW_SCHEMA_NONCOMPLIANT in MODULE.ALL_FAILURE_CLASSES
 
 
 # ── Test: README / function signatures ─────────────────────────────────
+
 
 class TestSignatures:
     """Verify expected check functions exist and have correct signatures."""
@@ -639,18 +697,14 @@ class TestSignatures:
         assert MODULE.REVIEW_PATH_PATTERN.match(
             ".elis/pe/PE-OPS-GITHUB-SKILLS-01/REVIEW_PE-OPS-GITHUB-SKILLS-01.md"
         )
-        assert MODULE.REVIEW_PATH_PATTERN.match(
-            ".elis/pe/PE-OPS-A2A-01/REVIEW.md"
-        )
+        assert MODULE.REVIEW_PATH_PATTERN.match(".elis/pe/PE-OPS-A2A-01/REVIEW.md")
 
     def test_REVIEW_PATH_PATTERN_wrong_path(self):
         """REVIEW_PATH_PATTERN should reject wrong paths."""
         assert not MODULE.REVIEW_PATH_PATTERN.match(
             "docs/ops/REVIEW_PE-OPS-GITHUB-SKILLS-01.md"
         )
-        assert not MODULE.REVIEW_PATH_PATTERN.match(
-            "some/other/path/REVIEW.md"
-        )
+        assert not MODULE.REVIEW_PATH_PATTERN.match("some/other/path/REVIEW.md")
 
     def test_REVIEW_REQUIRED_HEADINGS_defined(self):
         """REVIEW_REQUIRED_HEADINGS should list expected headings."""
