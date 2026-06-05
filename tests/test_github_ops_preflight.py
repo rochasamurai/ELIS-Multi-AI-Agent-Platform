@@ -9,12 +9,8 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "elis_github_ops_preflight.py"

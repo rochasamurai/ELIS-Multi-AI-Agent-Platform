@@ -631,9 +631,9 @@ def check_merge_approval(
 
     if pm_capable_paths:
         failures.append(
-            f"PM capability path(s) detected — "
-            f"PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED finding applies. "
-            f"Evidence (metadata only, no credential content):\n" +
+            "PM capability path(s) detected — "
+            "PM_GITHUB_WRITE_CAPABILITY_RESTRICTION_REQUIRED finding applies. "
+            "Evidence (metadata only, no credential content):\n" +
             "\n".join(f"  - {p}" for p in pm_capable_paths) +
             "\nDefer credential restriction to PE-OPS-GITHUB-PERMISSIONS-01."
         )
