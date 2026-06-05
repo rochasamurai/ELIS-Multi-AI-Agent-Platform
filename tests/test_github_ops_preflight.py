@@ -52,13 +52,12 @@ def _make_completed(returncode=0, stdout="", stderr=""):
 class TestCheckWorktreeBinding:
     """Check 1 — WRONG_GITHUB_WORKTREE_OR_CLONE."""
 
-    def test_pass_matches_path_and_remote(self, monkeypatch):
+    def test_pass_matches_path_and_remote(self, monkeypatch, tmp_path):
         """When pwd and remote match, should PASS."""
-        test_path = "/opt/elis/agent-worktrees/github-agent"
+        test_path = str(tmp_path)
         test_remote = "https://github.com/rochasamurai/ELIS-Multi-AI-Agent-Platform.git"
 
-        monkeypatch.setattr("os.getcwd", lambda: test_path)
-        monkeypatch.chdir(test_path)
+        monkeypatch.chdir(tmp_path)
 
         with patch.object(MODULE, "_git_cmd") as mock_git:
             # rev-parse --show-toplevel
@@ -99,23 +98,19 @@ class TestCheckWorktreeBinding:
         assert result["status"] == "FAIL"
         assert result["class"] == MODULE.WRONG_GITHUB_WORKTREE_OR_CLONE
 
-    def test_fail_wrong_remote(self, monkeypatch):
+    def test_fail_wrong_remote(self, monkeypatch, tmp_path):
         """When remote does not match expected, should FAIL."""
-        monkeypatch.setattr(
-            "os.getcwd", lambda: "/opt/elis/agent-worktrees/github-agent"
-        )
-        monkeypatch.chdir("/opt/elis/agent-worktrees/github-agent")
-        with patch.object(Path, "resolve") as mock_resolve:
-            mock_resolve.return_value = Path("/opt/elis/agent-worktrees/github-agent")
-            with patch.object(MODULE, "_git_cmd") as mock_git:
-                mock_git.side_effect = [
-                    _make_completed(stdout="/opt/elis/agent-worktrees/github-agent"),
-                    _make_completed(stdout="https://wrong-remote.com/repo.git"),
-                ]
-                result = MODULE.check_worktree_binding(
-                    expected_path="/opt/elis/agent-worktrees/github-agent",
-                    expected_remote="https://github.com/rochasamurai/ELIS-Multi-AI-Agent-Platform.git",
-                )
+        test_path = str(tmp_path)
+        monkeypatch.chdir(tmp_path)
+        with patch.object(MODULE, "_git_cmd") as mock_git:
+            mock_git.side_effect = [
+                _make_completed(stdout=test_path),
+                _make_completed(stdout="https://wrong-remote.com/repo.git"),
+            ]
+            result = MODULE.check_worktree_binding(
+                expected_path=test_path,
+                expected_remote="https://github.com/rochasamurai/ELIS-Multi-AI-Agent-Platform.git",
+            )
 
         assert result["status"] == "FAIL"
         assert "Remote mismatch" in result["detail"]
@@ -127,16 +122,16 @@ class TestCheckWorktreeBinding:
 class TestCheckBranchNotLocked:
     """Check 2 — PE_BRANCH_LOCKED_BY_OTHER_WORKTREE."""
 
-    def test_pass_branch_not_locked(self, monkeypatch):
+    def test_pass_branch_not_locked(self, monkeypatch, tmp_path):
         """When branch is not found in any other worktree, should PASS."""
-        monkeypatch.chdir("/opt/elis/agent-worktrees/infra-impl-b")
+        monkeypatch.chdir(tmp_path)
+        current = str(tmp_path)
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.side_effect = [
                 _make_completed(stdout="feature/pe-test"),
                 _make_completed(
                     stdout=(
-                        "/opt/elis/repo/.bare   (bare)\n"
-                        "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [feature/pe-test]\n"
+                        f"{current}  d78fc5db [feature/pe-test]\n"
                         "/opt/elis/agent-worktrees/github-agent  43f1c22 [main]\n"
                     )
                 ),
@@ -144,14 +139,14 @@ class TestCheckBranchNotLocked:
             result = MODULE.check_branch_not_locked("feature/pe-test")
         assert result["status"] == "PASS"
 
-    def test_fail_branch_locked_in_other_worktree(self, monkeypatch):
+    def test_fail_branch_locked_in_other_worktree(self, monkeypatch, tmp_path):
         """When branch exists in another worktree, should FAIL."""
-        monkeypatch.chdir("/opt/elis/agent-worktrees/infra-impl-b")
+        monkeypatch.chdir(tmp_path)
+        current = str(tmp_path)
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.return_value = _make_completed(
                 stdout=(
-                    "/opt/elis/repo/.bare   (bare)\n"
-                    "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [main]\n"
+                    f"{current}  d78fc5db [main]\n"
                     "/opt/elis/agent-worktrees/infra-val-a  3d27684 [feature/pe-locked]\n"
                 )
             )
@@ -160,16 +155,16 @@ class TestCheckBranchNotLocked:
         assert result["class"] == MODULE.PE_BRANCH_LOCKED_BY_OTHER_WORKTREE
         assert "locked" in result["detail"].lower()
 
-    def test_pass_own_worktree_not_counted(self, monkeypatch):
+    def test_pass_own_worktree_not_counted(self, monkeypatch, tmp_path):
         """When branch is in current worktree, should not count as locked."""
-        monkeypatch.chdir("/opt/elis/agent-worktrees/infra-impl-b")
+        monkeypatch.chdir(tmp_path)
+        current = str(tmp_path)
         with patch.object(MODULE, "_git_cmd") as mock_git:
             mock_git.side_effect = [
                 _make_completed(stdout="feature/pe-test"),
                 _make_completed(
                     stdout=(
-                        "/opt/elis/repo/.bare   (bare)\n"
-                        "/opt/elis/agent-worktrees/infra-impl-b  d78fc5db [feature/pe-test]\n"
+                        f"{current}  d78fc5db [feature/pe-test]\n"
                         "/opt/elis/agent-worktrees/github-agent  43f1c22 [main]\n"
                     )
                 ),
