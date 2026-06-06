@@ -1,0 +1,4 @@
+description: "ELIS PM runtime binding: coordinates PE workflows via Kanban decomposition\
+  \ and dispatch. Orchestrator only: no implementation, no validation, no GitHub writes.\
+  \ Pilot phase \u2014 not production cutover yet."
+description_auto: false
