@@ -1,0 +1,11 @@
+model:
+  default: nvidia/nemotron-3-ultra-550b-a55b:free
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+toolsets: kanban
+fallback_model:
+  provider: openrouter
+  model: google/gemma-4-31b-it:free
+agent:
+  max_turns: 20
+  gateway_timeout: 600
