@@ -5,6 +5,7 @@ Defines the single diagnostic/acknowledgement skill exposed by the
 ELIS Advisor A2A server.  Uses the official SDK protobuf construction
 pattern (ParseDict) — never Pydantic kwargs.
 """
+
 from a2a.types import AgentSkill
 from a2a.utils.proto_utils import ParseDict
 

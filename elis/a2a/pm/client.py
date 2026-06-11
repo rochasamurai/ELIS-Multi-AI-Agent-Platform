@@ -14,12 +14,13 @@ implement full PM message routing.  That is deferred to subsequent gates.
 Localhost-only: ``base_url`` must be ``http://127.0.0.1:<port>``.
 No public URL accepted.
 """
+
 import logging
 from urllib.parse import urlparse
 
 import httpx
 
-from a2a.client.card_resolver import A2ACardResolver, AGENT_CARD_WELL_KNOWN_PATH
+from a2a.client.card_resolver import A2ACardResolver
 from a2a.client.client import Client
 from a2a.client.client_factory import ClientFactory
 from a2a.client.transports.jsonrpc import JsonRpcTransport
@@ -112,6 +113,4 @@ class AdvisorClient:
         return factory.create(card)
 
     def __repr__(self) -> str:
-        return (
-            f"AdvisorClient(base_url={self.base_url!r}, rpc_url={self.rpc_url!r})"
-        )
+        return f"AdvisorClient(base_url={self.base_url!r}, rpc_url={self.rpc_url!r})"

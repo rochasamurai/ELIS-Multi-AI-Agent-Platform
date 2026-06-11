@@ -14,6 +14,7 @@ No 0.0.0.0 bind.  No production service install.
 The ASGI ``app`` object is exported so tests can mount it directly via
 ``httpx.ASGITransport`` without starting a live server.
 """
+
 import logging
 
 from google.protobuf.json_format import MessageToDict

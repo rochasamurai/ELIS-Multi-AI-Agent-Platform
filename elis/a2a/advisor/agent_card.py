@@ -5,6 +5,7 @@ Constructs the official A2A AgentCard protobuf object for the ELIS Advisor
 agent.  Localhost-only: ``url`` is always ``http://127.0.0.1:9500``.
 No public bind.  No production service install.
 """
+
 from a2a.types import AgentCard
 from a2a.utils.proto_utils import ParseDict
 

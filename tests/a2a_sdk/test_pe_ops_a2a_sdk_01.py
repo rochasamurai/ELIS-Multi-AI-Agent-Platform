@@ -13,8 +13,7 @@ Test suite covering:
 All tests run exclusively against the runtime venv at /opt/elis/a2a/venv.
 No live server is started; ASGI transport is used for route tests.
 """
-import sys
-import importlib
+
 from pathlib import Path
 
 import pytest
@@ -24,6 +23,7 @@ import httpx
 # =============================================================================
 # 1. Official SDK imports
 # =============================================================================
+
 
 class TestSDKImports:
     """Verify that every import used by the implementation resolves correctly."""
@@ -40,6 +40,7 @@ class TestSDKImports:
             TaskState,
             Role,
         )
+
         # All must be importable; just accessing the names is sufficient
         assert AgentCard is not None
         assert AgentSkill is not None
@@ -53,33 +54,40 @@ class TestSDKImports:
 
     def test_a2a_proto_utils(self):
         from a2a.utils.proto_utils import ParseDict
+
         assert callable(ParseDict)
 
     def test_a2a_server_agent_execution(self):
         from a2a.server.agent_execution import AgentExecutor, RequestContext
+
         assert AgentExecutor is not None
         assert RequestContext is not None
 
     def test_a2a_server_task_updater(self):
         from a2a.server.tasks.task_updater import TaskUpdater
+
         assert TaskUpdater is not None
 
     def test_a2a_server_legacy_request_handler(self):
         from a2a.server.request_handlers.default_request_handler import (
             LegacyRequestHandler,
         )
+
         assert LegacyRequestHandler is not None
 
     def test_a2a_server_routes(self):
         from a2a.server.routes import create_jsonrpc_routes
+
         assert callable(create_jsonrpc_routes)
 
     def test_a2a_inmemory_task_store(self):
         from a2a.server.tasks.inmemory_task_store import InMemoryTaskStore
+
         assert InMemoryTaskStore is not None
 
     def test_a2a_inmemory_queue_manager(self):
         from a2a.server.events.in_memory_queue_manager import InMemoryQueueManager
+
         assert InMemoryQueueManager is not None
 
     def test_a2a_client(self):
@@ -89,6 +97,7 @@ class TestSDKImports:
             A2ACardResolver,
             AGENT_CARD_WELL_KNOWN_PATH,
         )
+
         assert Client is not None
         assert JsonRpcTransport is not None
         assert A2ACardResolver is not None
@@ -98,6 +107,7 @@ class TestSDKImports:
 # =============================================================================
 # 2. No local repo package shadows official 'a2a'
 # =============================================================================
+
 
 class TestNoLocalShadowing:
     """
@@ -123,6 +133,7 @@ class TestNoLocalShadowing:
 
     def test_a2a_import_resolves_to_venv(self):
         import a2a
+
         module_file = Path(a2a.__file__).resolve()
         venv_root = Path("/opt/elis/a2a/venv").resolve()
         assert str(module_file).startswith(str(venv_root)), (
@@ -135,33 +146,39 @@ class TestNoLocalShadowing:
 # 3. Agent Card shape is valid
 # =============================================================================
 
+
 class TestAgentCardShape:
     """Verify AgentCard construction and field values."""
 
     def test_build_agent_card_returns_agent_card(self):
         from a2a.types import AgentCard
         from elis.a2a.advisor.agent_card import build_agent_card
+
         card = build_agent_card()
         assert isinstance(card, AgentCard)
 
     def test_agent_card_name(self):
         from elis.a2a.advisor.agent_card import build_agent_card
+
         card = build_agent_card()
         assert card.name == "ELIS Advisor"
 
     def test_agent_card_version(self):
         from elis.a2a.advisor.agent_card import build_agent_card
+
         card = build_agent_card()
         assert card.version == "0.1.0"
 
     def test_agent_card_has_skills(self):
         from elis.a2a.advisor.agent_card import build_agent_card
+
         card = build_agent_card()
         assert len(card.skills) == 1
         assert card.skills[0].id == "elis-advisor-acknowledge"
 
     def test_agent_card_supported_interfaces_localhost(self):
         from elis.a2a.advisor.agent_card import build_agent_card, ADVISOR_BASE_URL
+
         card = build_agent_card()
         assert len(card.supported_interfaces) == 1
         iface = card.supported_interfaces[0]
@@ -172,6 +189,7 @@ class TestAgentCardShape:
     def test_agent_skill_shape(self):
         from elis.a2a.advisor.agent_skill import build_advisor_skill
         from a2a.types import AgentSkill
+
         skill = build_advisor_skill()
         assert isinstance(skill, AgentSkill)
         assert skill.id == "elis-advisor-acknowledge"
@@ -181,6 +199,7 @@ class TestAgentCardShape:
 # =============================================================================
 # 4. Server route wiring is valid (ASGI in-process)
 # =============================================================================
+
 
 class TestServerRouteWiring:
     """
@@ -194,6 +213,7 @@ class TestServerRouteWiring:
 
     def _get_app(self):
         from elis.a2a.advisor.server import app
+
         return app
 
     @pytest.mark.anyio
@@ -215,9 +235,9 @@ class TestServerRouteWiring:
         ) as client:
             response = await client.get("/.well-known/agent-card.json")
         data = response.json()
-        assert "name" in data or "skills" in data, (
-            f"Agent card JSON missing expected fields: {list(data.keys())}"
-        )
+        assert (
+            "name" in data or "skills" in data
+        ), f"Agent card JSON missing expected fields: {list(data.keys())}"
 
     @pytest.mark.anyio
     async def test_rpc_endpoint_exists(self):
@@ -233,26 +253,29 @@ class TestServerRouteWiring:
                 headers={"Content-Type": "application/json"},
             )
         # 404 would mean the route isn't wired; any other status means it is
-        assert response.status_code != 404, (
-            f"RPC route returned 404 — route is not wired. Response: {response.text}"
-        )
+        assert (
+            response.status_code != 404
+        ), f"RPC route returned 404 — route is not wired. Response: {response.text}"
 
 
 # =============================================================================
 # 5. PM client scaffold constructs correctly
 # =============================================================================
 
+
 class TestPMClientScaffold:
     """Verify AdvisorClient construction and attribute values."""
 
     def test_default_construction(self):
         from elis.a2a.pm.client import AdvisorClient
+
         client = AdvisorClient()
         assert client.base_url == "http://127.0.0.1:9500"
         assert client.rpc_url == "http://127.0.0.1:9500/rpc"
 
     def test_custom_port(self):
         from elis.a2a.pm.client import AdvisorClient
+
         client = AdvisorClient(base_url="http://127.0.0.1:9501")
         assert client.base_url == "http://127.0.0.1:9501"
         assert client.rpc_url == "http://127.0.0.1:9501/rpc"
@@ -261,6 +284,7 @@ class TestPMClientScaffold:
         from elis.a2a.pm.client import AdvisorClient
         from elis.a2a.advisor.agent_card import build_agent_card
         from a2a.client.client import Client
+
         ac = AdvisorClient()
         # build_client requires a card: uses ClientFactory.create(card) — the
         # official SDK path.  Client is abstract; factory returns BaseClient.
@@ -270,6 +294,7 @@ class TestPMClientScaffold:
 
     def test_repr(self):
         from elis.a2a.pm.client import AdvisorClient
+
         ac = AdvisorClient()
         r = repr(ac)
         assert "127.0.0.1" in r
@@ -279,37 +304,44 @@ class TestPMClientScaffold:
 # 6. Localhost-only configuration is enforced
 # =============================================================================
 
+
 class TestLocalhostEnforcement:
     """Verify that non-localhost configuration is rejected at construction time."""
 
     def test_server_run_rejects_non_localhost(self):
         from elis.a2a.advisor.server import run
+
         with pytest.raises(ValueError, match="127.0.0.1"):
             run(host="0.0.0.0", port=9500)
 
     def test_server_run_rejects_public_ip(self):
         from elis.a2a.advisor.server import run
+
         with pytest.raises(ValueError, match="127.0.0.1"):
             run(host="192.168.1.100", port=9500)
 
     def test_pm_client_rejects_public_url(self):
         from elis.a2a.pm.client import AdvisorClient
+
         with pytest.raises(ValueError, match="127.0.0.1"):
             AdvisorClient(base_url="http://0.0.0.0:9500")
 
     def test_pm_client_rejects_remote_url(self):
         from elis.a2a.pm.client import AdvisorClient
+
         with pytest.raises(ValueError, match="127.0.0.1"):
             AdvisorClient(base_url="http://elis-server.internal:9500")
 
     def test_advisor_base_url_is_localhost(self):
         from elis.a2a.advisor.agent_card import ADVISOR_BASE_URL
         from urllib.parse import urlparse
+
         parsed = urlparse(ADVISOR_BASE_URL)
-        assert parsed.hostname == "127.0.0.1", (
-            f"ADVISOR_BASE_URL must be 127.0.0.1, got {parsed.hostname}"
-        )
+        assert (
+            parsed.hostname == "127.0.0.1"
+        ), f"ADVISOR_BASE_URL must be 127.0.0.1, got {parsed.hostname}"
 
     def test_advisor_base_url_no_public_bind(self):
         from elis.a2a.advisor.agent_card import ADVISOR_BASE_URL
+
         assert "0.0.0.0" not in ADVISOR_BASE_URL

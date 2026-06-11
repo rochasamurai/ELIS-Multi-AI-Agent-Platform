@@ -7,8 +7,8 @@ plain-text acknowledgement Part, and completes the task immediately.
 
 No external service calls, no governance actions, no production work.
 """
+
 import logging
-from typing import Any
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.tasks.task_updater import TaskUpdater
