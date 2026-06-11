@@ -15,10 +15,16 @@ dependencies = [
   "jsonschema==4.23.0",
   "requests==2.31.0",
   "PyYAML==6.0.2",
+  # A2A SDK — HTTP server extras only (fastapi, starlette, sse-starlette).
+  # gRPC, DB, signing, and opentelemetry extras are NOT required by this
+  # implementation and are intentionally excluded.
+  "a2a-sdk[fastapi]>=1.1.0,<2.0.0",
+  # ASGI server — required to run the advisor skeleton on localhost.
+  "uvicorn>=0.29.0",
 ]
 
 [project.optional-dependencies]
-dev = ["black", "ruff", "pytest"]
+dev = ["black", "ruff", "pytest", "pytest-asyncio"]
 
 [project.scripts]
 elis = "elis.cli:main"
