@@ -47,3 +47,11 @@ pycurl==7.45.4
 # - Used by: xploreapi/xploreapi.py (IEEE Xplore API client)
 # - Purpose: Provides up-to-date CA certificates for HTTPS connections
 certifi==2024.12.14
+
+# A2A SDK — HTTP server extras (fastapi, starlette, sse-starlette).
+# gRPC, DB, signing, and opentelemetry extras are intentionally excluded.
+# PE: PE-OPS-A2A-SDK-01
+a2a-sdk[fastapi]>=1.1.0,<2.0.0
+
+# ASGI server — required to run the elis.a2a.advisor skeleton on localhost.
+uvicorn>=0.29.0

@@ -129,3 +129,6 @@ claude_config.*
 
 # Node.js dependencies (installed for prototype TypeScript compilation)
 node_modules/
+
+# uv lock file — uv used as pip-substitute on this setuptools project; lock file is a side-effect, not a project artefact
+uv.lock
