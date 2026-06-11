@@ -135,10 +135,34 @@ class TestNoLocalShadowing:
         import a2a
 
         module_file = Path(a2a.__file__).resolve()
-        venv_root = Path("/opt/elis/a2a/venv").resolve()
-        assert str(module_file).startswith(str(venv_root)), (
-            f"'a2a' resolves to {module_file}, not inside {venv_root}. "
-            "Local shadowing suspected."
+        module_str = str(module_file)
+
+        # Hard reject: repo-local shadow paths that would override the
+        # installed package.  These must never appear — on any runner.
+        repo_shadow_prefixes = [
+            str(Path("/opt/elis/repo/a2a").resolve()),
+            str(Path("/opt/elis/repo/src/a2a").resolve()),
+        ]
+        for bad in repo_shadow_prefixes:
+            assert not module_str.startswith(bad), (
+                f"'a2a' resolved to a repo-local shadow path: {module_file}. "
+                f"This overrides the installed a2a-sdk package."
+            )
+
+        # Accept either:
+        #   (a) local ELIS runtime venv   — /opt/elis/a2a/venv/...
+        #   (b) package-managed install   — any path containing site-packages
+        #                                   or dist-packages (CI runners)
+        local_venv = str(Path("/opt/elis/a2a/venv").resolve())
+        in_local_venv = module_str.startswith(local_venv)
+        in_site_packages = (
+            "site-packages" in module_str or "dist-packages" in module_str
+        )
+
+        assert in_local_venv or in_site_packages, (
+            f"'a2a' resolved to an unexpected location: {module_file}. "
+            "Expected either the local ELIS venv (/opt/elis/a2a/venv) "
+            "or a package-managed site-packages / dist-packages path."
         )
 
 
