@@ -22,7 +22,7 @@ import logging
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events.event_queue import EventQueue
 from a2a.server.tasks.task_updater import TaskUpdater
-from a2a.types import Part, Task, TaskState, TaskStatus
+from a2a.types import Part, Task, TaskState
 from a2a.utils.proto_utils import ParseDict
 
 logger = logging.getLogger(__name__)

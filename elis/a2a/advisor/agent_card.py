@@ -16,7 +16,9 @@ ADVISOR_BASE_URL: str = "http://127.0.0.1:9500"
 ADVISOR_RPC_PATH: str = "/a2a"
 # Full RPC endpoint URL — ClientFactory.create() posts to supported_interfaces[0].url
 # verbatim, so this must be the complete endpoint path, not just the base URL.
-ADVISOR_RPC_URL: str = ADVISOR_BASE_URL + ADVISOR_RPC_PATH  # "http://127.0.0.1:9500/a2a"
+ADVISOR_RPC_URL: str = (
+    ADVISOR_BASE_URL + ADVISOR_RPC_PATH
+)  # "http://127.0.0.1:9500/a2a"
 
 # fmt: off
 _AGENT_CARD_DICT: dict = {
