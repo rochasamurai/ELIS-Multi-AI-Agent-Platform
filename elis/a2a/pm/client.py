@@ -47,13 +47,13 @@ class AdvisorClient:
 
     Args:
         base_url: Advisor server base URL.  Must be ``http://127.0.0.1:<port>``.
-        rpc_path: JSON-RPC endpoint path (default ``/rpc``).
+        rpc_path: JSON-RPC endpoint path (default ``/a2a``).
     """
 
     def __init__(
         self,
         base_url: str = "http://127.0.0.1:9500",
-        rpc_path: str = "/rpc",
+        rpc_path: str = "/a2a",
     ) -> None:
         _assert_localhost(base_url)
         self.base_url = base_url.rstrip("/")
@@ -67,7 +67,7 @@ class AdvisorClient:
         Requires a live server at ``self.base_url``.
         """
         async with httpx.AsyncClient(base_url=self.base_url) as http:
-            resolver = A2ACardResolver(http)
+            resolver = A2ACardResolver(http, base_url=self.base_url)
             card = await resolver.get_agent_card()
         logger.info(
             "AdvisorClient.resolve_card: resolved card name=%r version=%r",
