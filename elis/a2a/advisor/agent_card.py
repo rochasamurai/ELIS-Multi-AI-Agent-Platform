@@ -13,7 +13,12 @@ from elis.a2a.advisor.agent_skill import ADVISOR_SKILL_DICT
 
 # Localhost-only base URL — never 0.0.0.0 or a public host.
 ADVISOR_BASE_URL: str = "http://127.0.0.1:9500"
-ADVISOR_RPC_PATH: str = "/rpc"
+ADVISOR_RPC_PATH: str = "/a2a"
+# Full RPC endpoint URL — ClientFactory.create() posts to supported_interfaces[0].url
+# verbatim, so this must be the complete endpoint path, not just the base URL.
+ADVISOR_RPC_URL: str = (
+    ADVISOR_BASE_URL + ADVISOR_RPC_PATH
+)  # "http://127.0.0.1:9500/a2a"
 
 # fmt: off
 _AGENT_CARD_DICT: dict = {
@@ -30,7 +35,7 @@ _AGENT_CARD_DICT: dict = {
     "skills": [ADVISOR_SKILL_DICT],
     "supported_interfaces": [
         {
-            "url": ADVISOR_BASE_URL,
+            "url": ADVISOR_RPC_URL,
             # Must be 'JSONRPC' — matches TransportProtocol.JSONRPC (StrEnum).
             # ClientFactory.create() compares i.protocol_binding against
             # TransportProtocol values using string equality; 'A2A_JSONRPC_1_0'

@@ -201,12 +201,12 @@ class TestAgentCardShape:
         assert card.skills[0].id == "elis-advisor-acknowledge"
 
     def test_agent_card_supported_interfaces_localhost(self):
-        from elis.a2a.advisor.agent_card import build_agent_card, ADVISOR_BASE_URL
+        from elis.a2a.advisor.agent_card import build_agent_card, ADVISOR_RPC_URL
 
         card = build_agent_card()
         assert len(card.supported_interfaces) == 1
         iface = card.supported_interfaces[0]
-        assert iface.url == ADVISOR_BASE_URL
+        assert iface.url == ADVISOR_RPC_URL
         assert "127.0.0.1" in iface.url
         assert "0.0.0.0" not in iface.url
 
@@ -265,14 +265,14 @@ class TestServerRouteWiring:
 
     @pytest.mark.anyio
     async def test_rpc_endpoint_exists(self):
-        """POST to /rpc with an invalid body should return 400 or 422, not 404."""
+        """POST to /a2a with an invalid body should return 400 or 422, not 404."""
         app = self._get_app()
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
             transport=transport, base_url="http://127.0.0.1:9500"
         ) as client:
             response = await client.post(
-                "/rpc",
+                "/a2a",
                 json={"jsonrpc": "2.0", "method": "invalid_method", "id": 1},
                 headers={"Content-Type": "application/json"},
             )
@@ -295,14 +295,14 @@ class TestPMClientScaffold:
 
         client = AdvisorClient()
         assert client.base_url == "http://127.0.0.1:9500"
-        assert client.rpc_url == "http://127.0.0.1:9500/rpc"
+        assert client.rpc_url == "http://127.0.0.1:9500/a2a"
 
     def test_custom_port(self):
         from elis.a2a.pm.client import AdvisorClient
 
         client = AdvisorClient(base_url="http://127.0.0.1:9501")
         assert client.base_url == "http://127.0.0.1:9501"
-        assert client.rpc_url == "http://127.0.0.1:9501/rpc"
+        assert client.rpc_url == "http://127.0.0.1:9501/a2a"
 
     def test_build_client_returns_client_instance(self):
         from elis.a2a.pm.client import AdvisorClient
