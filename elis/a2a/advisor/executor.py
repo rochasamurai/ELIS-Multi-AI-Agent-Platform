@@ -25,6 +25,8 @@ from a2a.server.tasks.task_updater import TaskUpdater
 from a2a.types import Part, Task, TaskState
 from a2a.utils.proto_utils import ParseDict
 
+from elis.a2a.policy import validate_message
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,6 +80,40 @@ class AdvisorExecutor(AgentExecutor):
 
         # Step 3 — construct TaskUpdater as a convenience wrapper
         task_updater = TaskUpdater(event_queue, task_id, context_id)
+
+        # ── Gate 2E: policy validation ────────────────────────────────
+        metadata = context.message.metadata if context.message else None
+        sender_role = None
+        message_type = None
+        if metadata is not None:
+            if "elis_sender_role" in metadata:
+                sender_role = metadata["elis_sender_role"]  # type: ignore[assignment]
+            if "elis_message_type" in metadata:
+                message_type = metadata["elis_message_type"]  # type: ignore[assignment]
+
+        result = validate_message(
+            sender_role=sender_role,  # type: ignore[arg-type]
+            message_type=message_type,  # type: ignore[arg-type]
+            recipient_role="advisor",
+        )
+
+        if not result.allowed:
+            rejection_part = ParseDict({"text": result.rejection_text}, Part())
+            rejection_msg = task_updater.new_agent_message(
+                parts=[rejection_part],
+                metadata={
+                    "elis_rejection_code": result.rejection_code,
+                    "elis_policy_version": "1.0.0",
+                },
+            )
+            await task_updater.reject(message=rejection_msg)
+            logger.info(
+                "AdvisorExecutor: rejected — code=%s task_id=%s",
+                result.rejection_code,
+                task_id,
+            )
+            return
+        # ── End Gate 2E ──────────────────────────────────────────────
 
         # Step 4 — lifecycle: working → complete with acknowledgement
         await task_updater.start_work()
