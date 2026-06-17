@@ -13,8 +13,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-ALLOWED_SENDER_ROLES = frozenset({"advisor", "supervisor"})
+ALLOWED_SENDER_ROLES = frozenset({"advisor", "supervisor", "pm"})
 ALLOWED_INBOUND_MESSAGE_TYPES = frozenset({"request", "ack", "status"})
+PM_ALLOWED_RECIPIENTS = frozenset({"advisor", "supervisor"})
 
 
 class RejectionCode:
@@ -23,6 +24,7 @@ class RejectionCode:
     UNKNOWN_SENDER = "REJECTED_UNKNOWN_SENDER"
     UNSUPPORTED_TYPE = "REJECTED_UNSUPPORTED_TYPE"
     AUTONOMOUS_FOLLOW_ON = "REJECTED_AUTONOMOUS_FOLLOW_ON"
+    DISALLOWED_RECIPIENT = "REJECTED_DISALLOWED_RECIPIENT"
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,7 @@ def validate_message(
     sender_role: Optional[str],
     message_type: Optional[str],
     recipient_role: str,
+    declared_target_role: Optional[str] = None,
 ) -> PolicyResult:
     """Validate an incoming message against the Gate 2E policy table.
 
@@ -45,6 +48,11 @@ def validate_message(
         message_type: Value of Message.metadata.elis_message_type.
         recipient_role: The role of the agent receiving the message
                         ("advisor" or "supervisor").
+        declared_target_role: Value of Message.metadata.elis_target_role,
+                              if present.  Used for PM destination allowlist
+                              enforcement — PM must declare who it intends to
+                              reach, and that target must be in
+                              ``PM_ALLOWED_RECIPIENTS``.
 
     Returns:
         PolicyResult with allowed=True/False and rejection details if denied.
@@ -66,6 +74,20 @@ def validate_message(
             rejection_text=f"REJECTED: unknown sender role {sender_role!r}. "
             f"Allowed: {sorted(ALLOWED_SENDER_ROLES)}.",
         )
+
+    # PM destination allowlist — must declare intended target and it must be
+    # in the approved recipient set.
+    if sender_role == "pm" and declared_target_role is not None:
+        if declared_target_role not in PM_ALLOWED_RECIPIENTS:
+            return PolicyResult(
+                allowed=False,
+                rejection_code=RejectionCode.DISALLOWED_RECIPIENT,
+                rejection_text=(
+                    f"REJECTED: pm cannot target {declared_target_role!r}. "
+                    f"Allowed PM recipients: "
+                    f"{sorted(PM_ALLOWED_RECIPIENTS)}."
+                ),
+            )
 
     # Self-target
     if sender_role == recipient_role:
