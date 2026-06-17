@@ -148,13 +148,9 @@ class AdvisorClient:
                             event["text"] = p.text
                     msg_meta = t.status.message.metadata
                     if msg_meta and "elis_rejection_code" in msg_meta:
-                        event["rejection_code"] = msg_meta[
-                            "elis_rejection_code"
-                        ]
+                        event["rejection_code"] = msg_meta["elis_rejection_code"]
             elif which == "status_update":
-                event["state"] = a2a_pb2.TaskState.Name(
-                    resp.status_update.state
-                )
+                event["state"] = a2a_pb2.TaskState.Name(resp.status_update.state)
             events.append(event)
         return events
 
@@ -288,13 +284,9 @@ class SupervisorClient:
                             event["text"] = p.text
                     msg_meta = t.status.message.metadata
                     if msg_meta and "elis_rejection_code" in msg_meta:
-                        event["rejection_code"] = msg_meta[
-                            "elis_rejection_code"
-                        ]
+                        event["rejection_code"] = msg_meta["elis_rejection_code"]
             elif which == "status_update":
-                event["state"] = a2a_pb2.TaskState.Name(
-                    resp.status_update.state
-                )
+                event["state"] = a2a_pb2.TaskState.Name(resp.status_update.state)
             events.append(event)
         return events
 
