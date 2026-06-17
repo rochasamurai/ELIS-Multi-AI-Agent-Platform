@@ -5,9 +5,9 @@ Validates the 14-row policy decision table for the Advisor ↔ Supervisor
 loopback topology.  Assumes both servers are running on their canonical ports
 (Advisor 9500, Supervisor 9501).
 
-14 test cases:
-  6 allowed  → TASK_STATE_COMPLETED
-  8 rejected → TASK_STATE_REJECTED with correct REJECTED_* code in metadata
+24 test cases:
+  12 allowed → TASK_STATE_COMPLETED
+  11 rejected → TASK_STATE_REJECTED with correct REJECTED_* code in metadata
 
 Run:
   cd /opt/elis/repo && PYTHONPATH=. /opt/elis/a2a/venv/bin/python \\
@@ -69,8 +69,14 @@ async def send_governed_message(
     message_type: str,
     text: str = "Gate 2E diagnostic message.",
     task_ref: Optional[str] = None,
+    target_role: Optional[str] = None,
 ) -> list[dict]:
-    """Send a governed message with ELIS metadata and collect stream events."""
+    """Send a governed message with ELIS metadata and collect stream events.
+
+    Args:
+        target_role: If set, adds ``elis_target_role`` to metadata for
+                     PM destination allowlist enforcement.
+    """
     metadata = Struct()
     meta_dict: dict[str, str] = {
         "elis_sender_role": sender_role,
@@ -79,6 +85,8 @@ async def send_governed_message(
     }
     if task_ref:
         meta_dict["elis_task_ref"] = task_ref
+    if target_role:
+        meta_dict["elis_target_role"] = target_role
     metadata.update(meta_dict)
 
     part = ParseDict({"text": text}, a2a_pb2.Part())
@@ -312,11 +320,75 @@ async def main() -> int:
     assert_no_rejection_code(events, "Row 6: no rejection code")
 
     # ═══════════════════════════════════════════════════════════════════
-    # REJECTED CASES (rows 7–14)
+    # ALLOWED CASES — PM sender enrolment (rows 7–12)
     # ═══════════════════════════════════════════════════════════════════
 
-    # ── Rows 7–8: Self-target ──────────────────────────────────────────
-    print("\n── Rejected: Row 7 — advisor → advisor (self-target) ──")
+    print("\n── Allowed: Row 7 — pm → advisor request ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="pm",
+        message_type="request",
+    )
+    assert_completed(events, "Row 7: pm→advisor request → COMPLETED")
+    assert_no_rejection_code(events, "Row 7: no rejection code")
+
+    print("\n── Allowed: Row 8 — pm → supervisor request ──")
+    events = await send_governed_message(
+        supervisor_client,
+        target_url=SUPERVISOR_URL,
+        sender_role="pm",
+        message_type="request",
+    )
+    assert_completed(events, "Row 8: pm→supervisor request → COMPLETED")
+    assert_no_rejection_code(events, "Row 8: no rejection code")
+
+    print("\n── Allowed: Row 9 — pm → advisor ack ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="pm",
+        message_type="ack",
+    )
+    assert_completed(events, "Row 9: pm→advisor ack → COMPLETED")
+    assert_no_rejection_code(events, "Row 9: no rejection code")
+
+    print("\n── Allowed: Row 10 — pm → supervisor ack ──")
+    events = await send_governed_message(
+        supervisor_client,
+        target_url=SUPERVISOR_URL,
+        sender_role="pm",
+        message_type="ack",
+    )
+    assert_completed(events, "Row 10: pm→supervisor ack → COMPLETED")
+    assert_no_rejection_code(events, "Row 10: no rejection code")
+
+    print("\n── Allowed: Row 11 — pm → advisor status ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="pm",
+        message_type="status",
+    )
+    assert_completed(events, "Row 11: pm→advisor status → COMPLETED")
+    assert_no_rejection_code(events, "Row 11: no rejection code")
+
+    print("\n── Allowed: Row 12 — pm → supervisor status ──")
+    events = await send_governed_message(
+        supervisor_client,
+        target_url=SUPERVISOR_URL,
+        sender_role="pm",
+        message_type="status",
+    )
+    assert_completed(events, "Row 12: pm→supervisor status → COMPLETED")
+    assert_no_rejection_code(events, "Row 12: no rejection code")
+
+    # ═══════════════════════════════════════════════════════════════════
+    # REJECTED CASES (rows 13–22)
+    # ═══════════════════════════════════════════════════════════════════
+
+    # ── Rows 13–14: Self-target ──────────────────────────────────────────
+    print("\n── Rejected: Row 13 — advisor → advisor (self-target) ──")
     events = await send_governed_message(
         advisor_client,
         target_url=ADVISOR_URL,
@@ -326,10 +398,10 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_SELF_TARGET",
-        "Row 7: advisor self-target → REJECTED_SELF_TARGET",
+        "Row 13: advisor self-target → REJECTED_SELF_TARGET",
     )
 
-    print("\n── Rejected: Row 8 — supervisor → supervisor (self-target) ──")
+    print("\n── Rejected: Row 14 — supervisor → supervisor (self-target) ──")
     events = await send_governed_message(
         supervisor_client,
         target_url=SUPERVISOR_URL,
@@ -339,20 +411,20 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_SELF_TARGET",
-        "Row 8: supervisor self-target → REJECTED_SELF_TARGET",
+        "Row 14: supervisor self-target → REJECTED_SELF_TARGET",
     )
 
-    # ── Row 9: Malformed envelope (no metadata) ────────────────────────
-    print("\n── Rejected: Row 9 — no metadata (malformed envelope) ──")
+    # ── Row 15: Malformed envelope (no metadata) ────────────────────────
+    print("\n── Rejected: Row 15 — no metadata (malformed envelope) ──")
     events = await send_no_metadata(advisor_client)
     assert_rejected(
         events,
         "REJECTED_MALFORMED_ENVELOPE",
-        "Row 9: no metadata → REJECTED_MALFORMED_ENVELOPE",
+        "Row 15: no metadata → REJECTED_MALFORMED_ENVELOPE",
     )
 
-    # ── Row 10: Unknown sender ─────────────────────────────────────────
-    print("\n── Rejected: Row 10 — unknown sender ──")
+    # ── Row 16: Unknown sender ─────────────────────────────────────────
+    print("\n── Rejected: Row 16 — unknown sender ──")
     events = await send_governed_message(
         advisor_client,
         target_url=SUPERVISOR_URL,
@@ -362,11 +434,11 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_UNKNOWN_SENDER",
-        "Row 10: unknown sender → REJECTED_UNKNOWN_SENDER",
+        "Row 16: unknown sender → REJECTED_UNKNOWN_SENDER",
     )
 
-    # ── Rows 11–12: Unsupported type ───────────────────────────────────
-    print("\n── Rejected: Row 11 — advisor→supervisor unsupported type ──")
+    # ── Rows 17–18: Unsupported type ───────────────────────────────────
+    print("\n── Rejected: Row 17 — advisor→supervisor unsupported type ──")
     events = await send_governed_message(
         supervisor_client,
         target_url=SUPERVISOR_URL,
@@ -376,10 +448,10 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_UNSUPPORTED_TYPE",
-        "Row 11: unsupported type → REJECTED_UNSUPPORTED_TYPE",
+        "Row 17: unsupported type → REJECTED_UNSUPPORTED_TYPE",
     )
 
-    print("\n── Rejected: Row 12 — supervisor→advisor unsupported type ──")
+    print("\n── Rejected: Row 18 — supervisor→advisor unsupported type ──")
     events = await send_governed_message(
         advisor_client,
         target_url=ADVISOR_URL,
@@ -389,11 +461,11 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_UNSUPPORTED_TYPE",
-        "Row 12: unsupported type → REJECTED_UNSUPPORTED_TYPE",
+        "Row 18: unsupported type → REJECTED_UNSUPPORTED_TYPE",
     )
 
-    # ── Rows 13–14: Autonomous follow-on ───────────────────────────────
-    print("\n── Rejected: Row 13 — advisor→supervisor autonomous_follow_on ──")
+    # ── Rows 19–20: Autonomous follow-on ───────────────────────────────
+    print("\n── Rejected: Row 19 — advisor→supervisor autonomous_follow_on ──")
     events = await send_governed_message(
         supervisor_client,
         target_url=SUPERVISOR_URL,
@@ -403,10 +475,10 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_AUTONOMOUS_FOLLOW_ON",
-        "Row 13: autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
+        "Row 19: autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
     )
 
-    print("\n── Rejected: Row 14 — supervisor→advisor autonomous_follow_on ──")
+    print("\n── Rejected: Row 20 — supervisor→advisor autonomous_follow_on ──")
     events = await send_governed_message(
         advisor_client,
         target_url=ADVISOR_URL,
@@ -416,8 +488,54 @@ async def main() -> int:
     assert_rejected(
         events,
         "REJECTED_AUTONOMOUS_FOLLOW_ON",
-        "Row 14: autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
+        "Row 20: autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
     )
+
+    # ── Rows 21–23: PM rejected cases ───────────────────────────────────
+    print("\n── Rejected: Row 21 — pm→advisor unsupported type ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="pm",
+        message_type="execute_command",
+    )
+    assert_rejected(
+        events,
+        "REJECTED_UNSUPPORTED_TYPE",
+        "Row 21: pm unsupported type → REJECTED_UNSUPPORTED_TYPE",
+    )
+
+    print("\n── Rejected: Row 22 — pm→supervisor autonomous_follow_on ──")
+    events = await send_governed_message(
+        supervisor_client,
+        target_url=SUPERVISOR_URL,
+        sender_role="pm",
+        message_type="autonomous_follow_on",
+    )
+    assert_rejected(
+        events,
+        "REJECTED_AUTONOMOUS_FOLLOW_ON",
+        "Row 22: pm autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
+    )
+
+    # ── Row 23: PM destination denial — policy unit test ──────────
+    print("\n── Rejected: Row 23 — pm→github policy unit test ──")
+    from elis.a2a.policy import validate_message, RejectionCode as RC
+
+    result = validate_message(
+        sender_role="pm",
+        message_type="request",
+        recipient_role="advisor",
+        declared_target_role="github",
+    )
+    if not result.allowed and result.rejection_code == RC.DISALLOWED_RECIPIENT:
+        pass_("Row 23: pm→github → REJECTED_DISALLOWED_RECIPIENT (unit)")
+    else:
+        fail(
+            "Row 23: pm→github policy unit test",
+            f"expected DISALLOWED_RECIPIENT, got "
+            f"allowed={result.allowed} code={result.rejection_code!r}",
+        )
 
     # ═══════════════════════════════════════════════════════════════════
     # RESULT
