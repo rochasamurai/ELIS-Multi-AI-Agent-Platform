@@ -1,13 +1,17 @@
 """
-PE-OPS-A2A-PRODUCTION-01 — Gate 2E governed semantics validation.
+PE-OPS-A2A-RUNTIME-LOOPBACK-01 — Gate 3 governed semantics validation
+(includes Gate 2E policy + Gate 3 timestamp governance).
 
-Validates the 14-row policy decision table for the Advisor ↔ Supervisor
+Validates the 32-row policy decision table for the Advisor ↔ Supervisor
 loopback topology.  Assumes both servers are running on their canonical ports
 (Advisor 9500, Supervisor 9501).
 
-24 test cases:
+32 test cases:
   12 allowed → TASK_STATE_COMPLETED
-  11 rejected → TASK_STATE_REJECTED with correct REJECTED_* code in metadata
+  11 rejected (Gate 2E) → TASK_STATE_REJECTED
+   4 timestamp unit tests (validate_timestamp directly)
+   4 timestamp integration tests (live servers)
+   1 PM destination denial unit test (DISALLOWED_RECIPIENT)
 
 Run:
   cd /opt/elis/repo && PYTHONPATH=. /opt/elis/a2a/venv/bin/python \\
@@ -19,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
@@ -52,7 +57,29 @@ def fail(label: str, detail: str = "") -> None:
     print(msg)
 
 
-# ── Client helpers ─────────────────────────────────────────────────────────────
+# ── Timestamp helpers ────────────────────────────────────────────────────────
+
+
+def _utcnow_iso() -> str:
+    """Return the current UTC time as an ISO 8601 string with ``Z`` suffix."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _stale_timestamp(age_s: int = 600) -> str:
+    """Return an ISO 8601 UTC timestamp *age_s* seconds in the past."""
+    return (datetime.now(timezone.utc) - timedelta(seconds=age_s)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+
+def _future_timestamp(offset_s: int = 120) -> str:
+    """Return an ISO 8601 UTC timestamp *offset_s* seconds in the future."""
+    return (datetime.now(timezone.utc) + timedelta(seconds=offset_s)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+
+# ── Client helpers ───────────────────────────────────────────────────────────
 
 
 async def fetch_card(http: httpx.AsyncClient, base_url: str) -> a2a_pb2.AgentCard:
@@ -67,15 +94,20 @@ async def send_governed_message(
     target_url: str,
     sender_role: str,
     message_type: str,
-    text: str = "Gate 2E diagnostic message.",
+    text: str = "Gate 3 diagnostic message.",
     task_ref: Optional[str] = None,
     target_role: Optional[str] = None,
+    elis_sent_at=None,  # type: ignore[assignment] — _NO_TS sentinel or str|None
 ) -> list[dict]:
     """Send a governed message with ELIS metadata and collect stream events.
 
     Args:
         target_role: If set, adds ``elis_target_role`` to metadata for
                      PM destination allowlist enforcement.
+        elis_sent_at: ISO 8601 UTC timestamp.  If ``None``, the field is
+                      **omitted entirely** (used for E_TS_MISSING tests).
+                      If not provided at all, defaults to ``_utcnow_iso()``
+                      for normal allowed/rejected traffic.
     """
     metadata = Struct()
     meta_dict: dict[str, str] = {
@@ -83,6 +115,12 @@ async def send_governed_message(
         "elis_message_type": message_type,
         "elis_policy_version": "1.0.0",
     }
+    # Only add elis_sent_at if a value was explicitly provided or we default it.
+    # We detect "not provided" by a special sentinel.
+    if elis_sent_at is not _NO_TS:  # type: ignore[comparison-overlap]
+        meta_dict["elis_sent_at"] = (
+            elis_sent_at if elis_sent_at is not None else _utcnow_iso()
+        )
     if task_ref:
         meta_dict["elis_task_ref"] = task_ref
     if target_role:
@@ -137,6 +175,15 @@ async def send_governed_message(
     return events
 
 
+# Sentinel: when elis_sent_at is NOT passed to send_governed_message at all,
+# we default to a fresh timestamp.  When the caller passes _NO_TS explicitly,
+# we omit the field entirely (for E_TS_MISSING tests).
+_NO_TS = object()
+
+
+# ── Assertion helpers ────────────────────────────────────────────────────────
+
+
 async def send_no_metadata(client, text: str = "No metadata message.") -> list[dict]:
     """Send a message WITHOUT any metadata field — malformed envelope test."""
     part = ParseDict({"text": text}, a2a_pb2.Part())
@@ -177,7 +224,7 @@ async def send_no_metadata(client, text: str = "No metadata message.") -> list[d
     return events
 
 
-# ── Assertion helpers ──────────────────────────────────────────────────────────
+# ── Assertion helpers ────────────────────────────────────────────────────────
 
 
 def assert_completed(events: list[dict], label: str) -> bool:
@@ -225,14 +272,14 @@ def assert_no_rejection_code(events: list[dict], label: str) -> bool:
     return True
 
 
-# ── Main test ──────────────────────────────────────────────────────────────────
+# ── Main test ────────────────────────────────────────────────────────────────
 
 
 async def main() -> int:
     global PASSES, FAILS
 
     print("=" * 60)
-    print("Gate 2E — Governed A2A Semantics Validation")
+    print("Gate 3 — Governed A2A Semantics + Timestamp Governance")
     print("=" * 60)
 
     # ── Step 0: Fetch Agent Cards ──────────────────────────────────────
@@ -256,7 +303,7 @@ async def main() -> int:
     pass_("Both A2A clients instantiated")
 
     # ═══════════════════════════════════════════════════════════════════
-    # ALLOWED CASES (rows 1–6): request, ack, status across roles
+    # ALLOWED CASES (rows 1–12): request, ack, status across roles
     # ═══════════════════════════════════════════════════════════════════
 
     print("\n── Allowed: Row 1 — advisor → supervisor request ──")
@@ -384,7 +431,7 @@ async def main() -> int:
     assert_no_rejection_code(events, "Row 12: no rejection code")
 
     # ═══════════════════════════════════════════════════════════════════
-    # REJECTED CASES (rows 13–22)
+    # REJECTED CASES — Gate 2E (rows 13–23)
     # ═══════════════════════════════════════════════════════════════════
 
     # ── Rows 13–14: Self-target ──────────────────────────────────────────
@@ -491,7 +538,7 @@ async def main() -> int:
         "Row 20: autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
     )
 
-    # ── Rows 21–23: PM rejected cases ───────────────────────────────────
+    # ── Rows 21–22: PM rejected cases ───────────────────────────────────
     print("\n── Rejected: Row 21 — pm→advisor unsupported type ──")
     events = await send_governed_message(
         advisor_client,
@@ -518,15 +565,16 @@ async def main() -> int:
         "Row 22: pm autonomous_follow_on → REJECTED_AUTONOMOUS_FOLLOW_ON",
     )
 
-    # ── Row 23: PM destination denial — policy unit test ──────────
+    # ── Row 23: PM destination denial — policy unit test ──────────────
     print("\n── Rejected: Row 23 — pm→github policy unit test ──")
-    from elis.a2a.policy import validate_message, RejectionCode as RC
+    from elis.a2a.policy import validate_message as vm, RejectionCode as RC
 
-    result = validate_message(
+    result = vm(
         sender_role="pm",
         message_type="request",
         recipient_role="advisor",
         declared_target_role="github",
+        elis_sent_at=_utcnow_iso(),
     )
     if not result.allowed and result.rejection_code == RC.DISALLOWED_RECIPIENT:
         pass_("Row 23: pm→github → REJECTED_DISALLOWED_RECIPIENT (unit)")
@@ -536,6 +584,124 @@ async def main() -> int:
             f"expected DISALLOWED_RECIPIENT, got "
             f"allowed={result.allowed} code={result.rejection_code!r}",
         )
+
+    # ═══════════════════════════════════════════════════════════════════
+    # GATE 3 — TIMESTAMP GOVERNANCE (rows 24–31)
+    # ═══════════════════════════════════════════════════════════════════
+
+    from elis.a2a.policy import validate_timestamp
+
+    # ── Unit tests: validate_timestamp() directly ──────────────────────
+    print("\n── Timestamp unit: E_TS_MISSING ──")
+    result = validate_timestamp(elis_sent_at=None)
+    if not result.allowed and result.rejection_code == RC.TS_MISSING:
+        pass_("Row 24: E_TS_MISSING — None timestamp (unit)")
+    else:
+        fail(
+            "Row 24: E_TS_MISSING unit",
+            f"expected TS_MISSING, got allowed={result.allowed} "
+            f"code={result.rejection_code!r}",
+        )
+
+    print("\n── Timestamp unit: E_TS_MALFORMED ──")
+    result = validate_timestamp(elis_sent_at="not-a-timestamp")
+    if not result.allowed and result.rejection_code == RC.TS_MALFORMED:
+        pass_("Row 25: E_TS_MALFORMED — garbage timestamp (unit)")
+    else:
+        fail(
+            "Row 25: E_TS_MALFORMED unit",
+            f"expected TS_MALFORMED, got allowed={result.allowed} "
+            f"code={result.rejection_code!r}",
+        )
+
+    print("\n── Timestamp unit: E_TS_STALE ──")
+    result = validate_timestamp(elis_sent_at=_stale_timestamp(age_s=600))
+    if not result.allowed and result.rejection_code == RC.TS_STALE:
+        pass_("Row 26: E_TS_STALE — 600s old timestamp (unit)")
+    else:
+        fail(
+            "Row 26: E_TS_STALE unit",
+            f"expected TS_STALE, got allowed={result.allowed} "
+            f"code={result.rejection_code!r}",
+        )
+
+    print("\n── Timestamp unit: E_TS_FUTURE ──")
+    result = validate_timestamp(elis_sent_at=_future_timestamp(offset_s=120))
+    if not result.allowed and result.rejection_code == RC.TS_FUTURE:
+        pass_("Row 27: E_TS_FUTURE — 120s future timestamp (unit)")
+    else:
+        fail(
+            "Row 27: E_TS_FUTURE unit",
+            f"expected TS_FUTURE, got allowed={result.allowed} "
+            f"code={result.rejection_code!r}",
+        )
+
+    print("\n── Timestamp unit: valid timestamp (acceptance) ──")
+    result = validate_timestamp(elis_sent_at=_utcnow_iso())
+    if result.allowed:
+        pass_("Row 28: valid timestamp → allowed (unit)")
+    else:
+        fail(
+            "Row 28: valid timestamp acceptance",
+            f"expected allowed=True, got code={result.rejection_code!r}",
+        )
+
+    # ── Integration tests: live servers with bad timestamps ────────────
+    print("\n── Timestamp integration: E_TS_MISSING (no elis_sent_at) ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="supervisor",
+        message_type="request",
+        elis_sent_at=_NO_TS,
+    )
+    assert_rejected(
+        events,
+        "E_TS_MISSING",
+        "Row 29: no elis_sent_at → E_TS_MISSING (integration)",
+    )
+
+    print("\n── Timestamp integration: E_TS_MALFORMED (garbage) ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="supervisor",
+        message_type="request",
+        elis_sent_at="garbage-not-iso",
+    )
+    assert_rejected(
+        events,
+        "E_TS_MALFORMED",
+        "Row 30: malformed timestamp → E_TS_MALFORMED (integration)",
+    )
+
+    print("\n── Timestamp integration: E_TS_STALE (old timestamp) ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="supervisor",
+        message_type="request",
+        elis_sent_at=_stale_timestamp(age_s=600),
+    )
+    assert_rejected(
+        events,
+        "E_TS_STALE",
+        "Row 31: stale timestamp → E_TS_STALE (integration)",
+    )
+
+    print("\n── Timestamp integration: E_TS_FUTURE (far future) ──")
+    events = await send_governed_message(
+        advisor_client,
+        target_url=ADVISOR_URL,
+        sender_role="supervisor",
+        message_type="request",
+        elis_sent_at=_future_timestamp(offset_s=120),
+    )
+    assert_rejected(
+        events,
+        "E_TS_FUTURE",
+        "Row 32: future timestamp → E_TS_FUTURE (integration)",
+    )
 
     # ═══════════════════════════════════════════════════════════════════
     # RESULT
