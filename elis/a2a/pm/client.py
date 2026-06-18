@@ -19,6 +19,7 @@ No public URL accepted.
 
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -67,6 +68,9 @@ def _build_governed_metadata(
         "elis_sender_role": sender_role,
         "elis_message_type": message_type,
         "elis_policy_version": policy_version,
+        "elis_sent_at": datetime.now(timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
     }
     if task_ref:
         meta_dict["elis_task_ref"] = task_ref

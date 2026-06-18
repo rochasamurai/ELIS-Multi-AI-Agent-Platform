@@ -13,8 +13,10 @@ Validates:
 import asyncio
 import sys
 import uuid
+from datetime import datetime, timezone
 
 import httpx
+from google.protobuf.struct_pb2 import Struct
 
 from a2a.client.card_resolver import A2ACardResolver
 from a2a.client.client_factory import ClientFactory
@@ -44,11 +46,25 @@ async def send_message_and_collect(client, text):
         and ``text`` (when present).
     """
     part = ParseDict({"text": text}, a2a_pb2.Part())
+    metadata = Struct()
+    metadata.update({
+        "elis_sender_role": "pm",
+        "elis_message_type": "request",
+        "elis_policy_version": "1.0.0",
+        "elis_sent_at": datetime.now(timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
+    })
     msg = ParseDict(
         {
             "message_id": str(uuid.uuid4()),
             "context_id": str(uuid.uuid4()),
             "role": a2a_pb2.Role.Value("ROLE_USER"),
+            "metadata": MessageToDict(
+                metadata,
+                preserving_proto_field_name=True,
+                always_print_fields_with_no_presence=False,
+            ),
             "parts": [
                 MessageToDict(
                     part,
