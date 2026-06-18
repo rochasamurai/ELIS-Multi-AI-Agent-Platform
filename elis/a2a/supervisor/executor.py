@@ -79,20 +79,24 @@ class SupervisorExecutor(AgentExecutor):
         # Step 3 — construct TaskUpdater as a convenience wrapper
         task_updater = TaskUpdater(event_queue, task_id, context_id)
 
-        # ── Gate 2E: policy validation ────────────────────────────────
+        # ── Gate 2E + Gate 3: policy validation ─────────────────────────
         metadata = context.message.metadata if context.message else None
         sender_role = None
         message_type = None
+        elis_sent_at = None
         if metadata is not None:
             if "elis_sender_role" in metadata:
                 sender_role = metadata["elis_sender_role"]  # type: ignore[assignment]
             if "elis_message_type" in metadata:
                 message_type = metadata["elis_message_type"]  # type: ignore[assignment]
+            if "elis_sent_at" in metadata:
+                elis_sent_at = metadata["elis_sent_at"]  # type: ignore[assignment]
 
         result = validate_message(
             sender_role=sender_role,  # type: ignore[arg-type]
             message_type=message_type,  # type: ignore[arg-type]
             recipient_role="supervisor",
+            elis_sent_at=elis_sent_at,  # type: ignore[arg-type]
         )
 
         if not result.allowed:
@@ -121,7 +125,19 @@ class SupervisorExecutor(AgentExecutor):
             "This is a diagnostic response confirming the channel is operational."
         )
         part: Part = ParseDict({"text": ack_text}, Part())
-        response_message = task_updater.new_agent_message(parts=[part])
+        from datetime import datetime, timezone as _tz
+
+        response_message = task_updater.new_agent_message(
+            parts=[part],
+            metadata={
+                "elis_sender_role": "supervisor",
+                "elis_message_type": "ack",
+                "elis_policy_version": "1.0.0",
+                "elis_processed_at": datetime.now(_tz.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+            },
+        )
         await task_updater.complete(message=response_message)
 
         logger.info(
