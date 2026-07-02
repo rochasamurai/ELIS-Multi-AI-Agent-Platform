@@ -25,7 +25,7 @@ from typing import Optional
 
 ALLOWED_SENDER_ROLES = frozenset({"advisor", "supervisor", "pm"})
 ALLOWED_INBOUND_MESSAGE_TYPES = frozenset({"request", "ack", "status"})
-PM_ALLOWED_RECIPIENTS = frozenset({"advisor", "supervisor"})
+PM_ALLOWED_RECIPIENTS = frozenset({"advisor", "supervisor", "github"})
 
 # Timestamp governance constants (Gate 3)
 MAX_STALE_AGE_S = 300
@@ -181,6 +181,18 @@ def validate_message(
         return ts_result
     # ── End Gate 3 ─────────────────────────────────────────────────────
 
+    # Self-target (must fire before unknown sender — GitHub→GitHub returns
+    # SELF_TARGET, not UNKNOWN_SENDER).
+    if sender_role == recipient_role:
+        return PolicyResult(
+            allowed=False,
+            rejection_code=RejectionCode.SELF_TARGET,
+            rejection_text=(
+                f"REJECTED: self-target not allowed "
+                f"({sender_role} → {recipient_role})."
+            ),
+        )
+
     # Unknown sender
     if sender_role not in ALLOWED_SENDER_ROLES:
         return PolicyResult(
@@ -192,28 +204,35 @@ def validate_message(
             ),
         )
 
-    # PM destination allowlist — must declare intended target and it must be
-    # in the approved recipient set.
-    if sender_role == "pm" and declared_target_role is not None:
-        if declared_target_role not in PM_ALLOWED_RECIPIENTS:
+    # PM destination allowlist — target must be in the approved recipient set.
+    # Falls back to recipient_role when declared_target_role is not set, so
+    # PM→Ideas and other disallowed routes are rejected even without an
+    # explicit elis_target_role.
+    if sender_role == "pm":
+        effective_target = (
+            declared_target_role
+            if declared_target_role is not None
+            else recipient_role
+        )
+        if effective_target not in PM_ALLOWED_RECIPIENTS:
             return PolicyResult(
                 allowed=False,
                 rejection_code=RejectionCode.DISALLOWED_RECIPIENT,
                 rejection_text=(
-                    f"REJECTED: pm cannot target {declared_target_role!r}. "
+                    f"REJECTED: pm cannot target {effective_target!r}. "
                     f"Allowed PM recipients: "
                     f"{sorted(PM_ALLOWED_RECIPIENTS)}."
                 ),
             )
 
-    # Self-target
-    if sender_role == recipient_role:
+    # Non-PM senders must not target GitHub — only PM is authorised.
+    if recipient_role == "github" and sender_role != "pm":
         return PolicyResult(
             allowed=False,
-            rejection_code=RejectionCode.SELF_TARGET,
+            rejection_code=RejectionCode.DISALLOWED_RECIPIENT,
             rejection_text=(
-                f"REJECTED: self-target not allowed "
-                f"({sender_role} → {recipient_role})."
+                f"REJECTED: only pm can target github, "
+                f"got sender {sender_role!r}."
             ),
         )
 
