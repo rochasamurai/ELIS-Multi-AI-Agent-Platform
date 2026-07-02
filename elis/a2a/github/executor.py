@@ -89,6 +89,7 @@ class GitHubExecutor(AgentExecutor):
         sender_role = None
         message_type = None
         elis_sent_at = None
+        declared_target_role = None
         if metadata is not None:
             if "elis_sender_role" in metadata:
                 sender_role = metadata["elis_sender_role"]  # type: ignore[assignment]
@@ -96,11 +97,14 @@ class GitHubExecutor(AgentExecutor):
                 message_type = metadata["elis_message_type"]  # type: ignore[assignment]
             if "elis_sent_at" in metadata:
                 elis_sent_at = metadata["elis_sent_at"]  # type: ignore[assignment]
+            if "elis_target_role" in metadata:
+                declared_target_role = metadata["elis_target_role"]  # type: ignore[assignment]
 
         result = validate_message(
             sender_role=sender_role,  # type: ignore[arg-type]
             message_type=message_type,  # type: ignore[arg-type]
             recipient_role="github",
+            declared_target_role=declared_target_role,  # type: ignore[arg-type]
             elis_sent_at=elis_sent_at,  # type: ignore[arg-type]
         )
 
@@ -136,7 +140,8 @@ class GitHubExecutor(AgentExecutor):
             parts=[part],
             metadata={
                 "elis_sender_role": "github",
-                "elis_message_type": "ack",
+                "elis_message_type": "github_result",
+                "elis_authoritative_record": task_id,
                 "elis_policy_version": "1.0.0",
                 "elis_processed_at": datetime.now(_tz.utc).strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
