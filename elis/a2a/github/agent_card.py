@@ -9,24 +9,39 @@ No public bind.  No production service install.
 from a2a.types import AgentCard
 from a2a.utils.proto_utils import ParseDict
 
-from elis.a2a.github.agent_skill import GITHUB_SKILL_DICT
+# ── GitHub Skill (defined inline — no separate agent_skill.py) ─────────
+# fmt: off
+GITHUB_SKILL_DICT: dict = {
+    "id": "elis-github-acknowledge",
+    "name": "Acknowledge",
+    "description": (
+        "Safe diagnostic and acknowledgement skill for ELIS GitHub.  "
+        "Accepts a plain-text message and returns a structured "
+        "acknowledgement confirming the A2A channel is operational.  "
+        "No governance-sensitive action is taken by this skill."
+    ),
+    "tags": ["elis", "github", "diagnostic"],
+    "examples": ["ping", "hello github", "ack"],
+    "input_modes": ["application/json"],
+    "output_modes": ["application/json"],
+}
+# fmt: on
 
+# ── Agent Card ─────────────────────────────────────────────────────────
 # Localhost-only base URL — never 0.0.0.0 or a public host.
 GITHUB_BASE_URL: str = "http://127.0.0.1:9503"
 GITHUB_RPC_PATH: str = "/a2a"
 # Full RPC endpoint URL — ClientFactory.create() posts to supported_interfaces[0].url
 # verbatim, so this must be the complete endpoint path, not just the base URL.
-GITHUB_RPC_URL: str = (
-    GITHUB_BASE_URL + GITHUB_RPC_PATH
-)  # "http://127.0.0.1:9503/a2a"
+GITHUB_RPC_URL: str = GITHUB_BASE_URL + GITHUB_RPC_PATH  # "http://127.0.0.1:9503/a2a"
 
 # fmt: off
-_AGENT_CARD_DICT: dict = {
+_GITHUB_CARD_DICT: dict = {
     "name": "ELIS GitHub",
     "description": (
-        "ELIS GitHub A2A endpoint.  Provides GitHub operations capability "
-        "to ELIS PM via the official Google A2A JSON-RPC protocol.  "
-        "All operations are scoped to the elis-core GitHub organisation."
+        "ELIS GitHub A2A endpoint.  Provides GitHub operation and "
+        "repository management capability to ELIS agents via the official A2A "
+        "JSON-RPC protocol."
     ),
     "version": "0.1.0",
     "capabilities": {
@@ -53,4 +68,4 @@ _AGENT_CARD_DICT: dict = {
 
 def build_agent_card() -> AgentCard:
     """Return the canonical ELIS GitHub AgentCard protobuf object."""
-    return ParseDict(_AGENT_CARD_DICT, AgentCard())
+    return ParseDict(_GITHUB_CARD_DICT, AgentCard())
