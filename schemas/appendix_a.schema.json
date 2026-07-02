@@ -116,14 +116,15 @@
 
   "items": {
     "type": "object",
-    "required": ["id", "source", "retrieved_at", "query_topic", "query_string"],
+    "$comment": "Required fields relaxed to accommodate pre-schema records (see PE-OPS-DATA-QUALITY-APPENDIX-A). Only 'source' is guaranteed across all records; id, retrieved_at, query_topic, and query_string are present on recent harvests only.",
+    "required": ["source"],
     "properties": {
       "id":         { "type": "string" },
       "_stable_id": { "type": "string" },
 
       "title":     { "type": ["string", "null"] },
-      "authors":   { "type": "array", "items": { "type": "string" } },
-      "year":      { "type": ["integer", "null"] },
+      "authors":   { "$comment": "Accepts string (pre-schema records) or array of strings.", "type": ["string", "array"], "items": { "type": "string" } },
+      "year":      { "$comment": "Accepts string (pre-schema records), integer, or null.", "type": ["string", "integer", "null"] },
       "doi":       { "type": ["string", "null"] },
       "venue":     { "type": ["string", "null"] },
       "publisher": { "type": ["string", "null"] },
