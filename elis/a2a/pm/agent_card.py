@@ -33,9 +33,7 @@ PM_BASE_URL: str = "http://127.0.0.1:9502"
 PM_RPC_PATH: str = "/a2a"
 # Full RPC endpoint URL — ClientFactory.create() posts to supported_interfaces[0].url
 # verbatim, so this must be the complete endpoint path, not just the base URL.
-PM_RPC_URL: str = (
-    PM_BASE_URL + PM_RPC_PATH
-)  # "http://127.0.0.1:9502/a2a"
+PM_RPC_URL: str = PM_BASE_URL + PM_RPC_PATH  # "http://127.0.0.1:9502/a2a"
 
 # fmt: off
 _PM_CARD_DICT: dict = {
