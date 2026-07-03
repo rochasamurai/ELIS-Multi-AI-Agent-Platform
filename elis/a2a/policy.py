@@ -210,9 +210,7 @@ def validate_message(
     # explicit elis_target_role.
     if sender_role == "pm":
         effective_target = (
-            declared_target_role
-            if declared_target_role is not None
-            else recipient_role
+            declared_target_role if declared_target_role is not None else recipient_role
         )
         if effective_target not in PM_ALLOWED_RECIPIENTS:
             return PolicyResult(
@@ -231,8 +229,7 @@ def validate_message(
             allowed=False,
             rejection_code=RejectionCode.DISALLOWED_RECIPIENT,
             rejection_text=(
-                f"REJECTED: only pm can target github, "
-                f"got sender {sender_role!r}."
+                f"REJECTED: only pm can target github, " f"got sender {sender_role!r}."
             ),
         )
 

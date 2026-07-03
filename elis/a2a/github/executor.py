@@ -136,6 +136,7 @@ class GitHubExecutor(AgentExecutor):
         )
         part: Part = ParseDict({"text": ack_text}, Part())
         from datetime import datetime, timezone as _tz
+
         response_message = task_updater.new_agent_message(
             parts=[part],
             metadata={
