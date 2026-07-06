@@ -123,16 +123,12 @@ class AdvisorClient:
             task_ref=task_ref,
         )
         part = ParseDict({"text": text}, Part())
-        msg = ParseDict(
-            {
-                "message_id": str(uuid.uuid4()),
-                "context_id": str(uuid.uuid4()),
-                "role": a2a_pb2.Role.Value("ROLE_USER"),
-                "parts": [part],
-                "metadata": metadata,
-            },
-            Message(),
-        )
+        msg = Message()
+        msg.message_id = str(uuid.uuid4())
+        msg.context_id = str(uuid.uuid4())
+        msg.role = a2a_pb2.Role.Value("ROLE_USER")
+        msg.parts.append(part)
+        msg.metadata.CopyFrom(metadata)
         req = SendMessageRequest(message=msg)
 
         events: list[dict[str, Any]] = []
@@ -259,16 +255,12 @@ class SupervisorClient:
             task_ref=task_ref,
         )
         part = ParseDict({"text": text}, Part())
-        msg = ParseDict(
-            {
-                "message_id": str(uuid.uuid4()),
-                "context_id": str(uuid.uuid4()),
-                "role": a2a_pb2.Role.Value("ROLE_USER"),
-                "parts": [part],
-                "metadata": metadata,
-            },
-            Message(),
-        )
+        msg = Message()
+        msg.message_id = str(uuid.uuid4())
+        msg.context_id = str(uuid.uuid4())
+        msg.role = a2a_pb2.Role.Value("ROLE_USER")
+        msg.parts.append(part)
+        msg.metadata.CopyFrom(metadata)
         req = SendMessageRequest(message=msg)
 
         events: list[dict[str, Any]] = []
